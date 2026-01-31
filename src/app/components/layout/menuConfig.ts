@@ -1,0 +1,135 @@
+// Define user roles
+export type UserRole = "SuperAdmin" | "ProjectManager" | "User" | "Reviewer" | "Facilitator" | null;
+
+// Define menu item structure
+export interface MenuItem {
+  label: string;
+  href: string;
+  iconName: string;
+  roles: UserRole[];
+  subItems?: { label: string; href: string }[];
+}
+
+
+export const menuConfig: MenuItem[] = [
+  {
+    label: "Dashboard",
+    href: "/superadmin",
+    iconName: "overview",
+    roles: ["SuperAdmin"],
+  },
+  {
+    label: "Dashboard",
+    href: "/projectmanager",
+    iconName: "overview",
+    roles: ["ProjectManager",],
+  },
+  {
+    label: "Dashboard",
+    href: "/dashboard",
+    iconName: "overview",
+    roles: ["User"],
+  },
+  {
+    label: "User Management",
+    href: "/superadmin/users",
+    iconName: "userManagement",
+    roles: ["SuperAdmin"],
+  },
+  {
+    label: "Project Management",
+    href: "/superadmin/project",
+    iconName: "projectManagement",
+    roles: ["SuperAdmin"],
+  },
+  {
+    label: "Dashboard",
+    href: "/reviewer",
+    iconName: "overview",
+    roles: ["Reviewer"],
+  },
+  {
+    label: "Tasks",
+    href: "/reviewer/tasks",
+    iconName: "projectManagement",
+    roles: ["Reviewer"],
+  },
+
+  {
+    label: "Tasks",
+    href: "/facilitator/",
+    iconName: "overview",
+    roles: ["Facilitator"],
+  },
+  // {
+  //   label: "Tasks",
+  //   href: "/facilitator/tasks",
+  //   iconName: "projectManagement",
+  //   roles: ["Facilitator"],
+  // },
+  {
+    label: "Base Data",
+    href: "",
+    iconName: "baseData",
+    roles: ["SuperAdmin"],
+    subItems: [
+      { label: "Language", href: "/superadmin/basedata/language" },
+      { label: "Dialect", href: "/superadmin/basedata/dialect" },
+      { label: "Sector", href: "/superadmin/basedata/sector" },
+      { label: "Organization", href: "/superadmin/basedata/organization" },
+      { label: "Country", href: "/superadmin/basedata/country" },
+      { label: "Region", href: "/superadmin/basedata/region" },
+      { label: "Zone", href: "/superadmin/basedata/zone" },
+      { label: "Rejection Type", href: "/superadmin/basedata/rejectionType" },
+      { label: "Annotation Type", href: "/superadmin/basedata/annotationType" },
+      { label: "Annotation ", href: "/superadmin/basedata/annotation" },
+      { label: "Flag Type", href: "/superadmin/basedata/flagType" },
+    ],
+  },
+  {
+    label: "Archive",
+    href: "/superadmin/projectArchive",
+    iconName: "archive",
+    roles: ["SuperAdmin"],
+  },
+  {
+    label: "Settings",
+    href: "/superadmin/setting",
+    iconName: "settings",
+    roles: ["SuperAdmin"],
+  },
+
+  {
+    label: "System Log",
+    href: "/superadmin/log",
+    iconName: "log",
+    roles: ["SuperAdmin"],
+  },
+
+
+  {
+    label: "Projects",
+    href: "/projectmanager/project",
+    iconName: "projectManagement",
+    roles: ["ProjectManager"],
+  },
+  {
+    label: "Settings",
+    href: "/",
+    iconName: "settings",
+    roles: ["ProjectManager"],
+  },
+
+  {
+    label: "Help & Support",
+    href: "/help",
+    iconName: "help",
+    roles: ["SuperAdmin", "ProjectManager", "User", "Reviewer", "Facilitator"],
+  },
+  // {
+  //   label: "Login",
+  //   href: "/login",
+  //   iconName: "help",
+  //   roles: [null],
+  // },
+];

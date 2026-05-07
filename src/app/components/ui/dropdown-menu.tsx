@@ -71,4 +71,4 @@ export {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuCheckboxItem,
-};"use client";
+};

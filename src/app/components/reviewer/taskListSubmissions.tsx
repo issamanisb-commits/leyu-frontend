@@ -45,7 +45,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import MicroTaskListSubission from "./microTaskListSubmissions.tsx"; // Assuming MicroTaskList is in the same directory or adjust the import path
+import MicroTaskListSubission from "./microTaskListSubmissions.tsx";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 import type { SortingState } from "@tanstack/react-table";
 interface TaskListProps {}
@@ -61,10 +62,11 @@ interface PaginationProps {
 const PaginationControls: React.FC<{ pagination: PaginationProps }> = ({
   pagination,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-2">
-        <span className="md:text-sm text-xs text-gray-500">Showing</span>
+        <span className="md:text-sm text-xs text-gray-500">{t('showing')}</span>
         <select
           value={pagination.pageSize}
           onChange={(e) => {

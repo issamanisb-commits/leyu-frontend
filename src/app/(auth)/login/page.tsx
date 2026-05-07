@@ -23,7 +23,30 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
-  const callbackUrl = searchParams.get("callbackUrl") || "/superadmin";
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
+
+  // Handle redirect after successful authentication
+  useEffect(() => {
+    console.log("Login page useEffect - status:", status, "session:", session, "callbackUrl:", callbackUrl);
+    if (status === "authenticated" && session?.user?.role) {
+      console.log("Session authenticated, redirecting based on role:", session.user.role);
+      
+      const roleRoutes: Record<string, string> = {
+        SuperAdmin: "/superadmin",
+        ProjectManager: "/projectmanager",
+        Facilitator: "/facilitator",
+        Reviewer: "/reviewer",
+        QualityAssurance: "/qualityAssurance",
+      };
+      
+      const targetRoute = roleRoutes[session.user.role] || "/superadmin";
+      console.log("Redirecting to:", targetRoute);
+      
+      // Use window.location.replace for immediate redirect without history
+      window.location.replace(targetRoute);
+    }
+  }, [status, session]);
+
   const validateNewPassword = (newpassword: string) => {
     const minLength = newpassword.length >= 8;
     const hasUpperCase = /[A-Z]/.test(newpassword);
@@ -154,62 +177,28 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // Use the callbackUrl if it exists, otherwise default to role-based routing
       const result = await signIn("credentials", {
         email,
         password,
-        redirect: false,
-        callbackUrl: "/",
+        callbackUrl: callbackUrl !== "/" ? callbackUrl : undefined,
+        redirect: false, // Handle redirect manually after getting session
       });
 
       if (result?.error) {
-        toast.error("Invalid email or password.");
-      } else {
-        toast.success("Login successful. Redirecting...");
-        await fetch("/api/auth/session").then((res) => res.json());
-        setTimeout(() => {
-          if (session?.user?.role) {
-            redirectBasedOnRole(session.user.role);
-          } else {
-            // Fallback: check session again after a delay
-            setTimeout(() => {
-              if (session?.user?.role) {
-                redirectBasedOnRole(session.user.role);
-              } else {
-                // Final fallback: redirect to default
-                router.push("/");
-                router.refresh();
-              }
-            }, 500);
-          }
-        }, 300);
+        console.error("Login error:", result.error);
+        toast.error("Authentication failed. Please check your credentials.");
+        setLoading(false);
+      } else if (result?.ok) {
+        console.log("Login successful, waiting for session...");
+        // The useEffect will handle the redirect once session is available
       }
-
-      // Handle routing based on role
+      
     } catch (error) {
-     
+      console.error("Login error:", error);
       toast.error("Authentication failed. Please check your credentials.");
-    } finally {
       setLoading(false);
     }
-  };
-  const redirectBasedOnRole = (role: string) => {
-    switch (role) {
-      case "SuperAdmin":
-        router.push("/superadmin");
-        break;
-      case "ProjectManager":
-        router.push("/projectmanager");
-        break;
-      case "Facilitator":
-        router.push("/dashboard/Facilitator");
-        break;
-      case "Reviewer":
-        router.push("/dashboard/Reviewer");
-        break;
-      default:
-        router.push("/dashboard");
-    }
-    router.refresh();
   };
   return (
     <div className="min-h-screen flex">

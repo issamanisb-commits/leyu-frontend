@@ -57,10 +57,11 @@ const CreateContributors: React.FC<CreateContributorsProps> = ({
     { accessorKey: "phone_number", header: "Phone number" },
     { accessorKey: "gender", header: "Gender" },
     { accessorKey: "is_active", header: "Active" },
+    { accessorKey: "referral_code", header: "Referral code" },
   ];
   const handleFilterChange = (
     newFilters: { [key: string]: string | boolean },
-    endpoint: string
+    endpoint: string,
   ) => {
     setFilters(newFilters);
     setPage(1);
@@ -74,7 +75,7 @@ const CreateContributors: React.FC<CreateContributorsProps> = ({
       setCachedUsers((prev) => {
         const newUsers = usersData.data.result.filter(
           (newUser: any) =>
-            !prev.some((cachedUser) => cachedUser.id === newUser.id)
+            !prev.some((cachedUser) => cachedUser.id === newUser.id),
         );
         return [...prev, ...newUsers];
       });
@@ -112,14 +113,14 @@ const CreateContributors: React.FC<CreateContributorsProps> = ({
     setSelectedUsers((prev) =>
       prev.includes(userId)
         ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
+        : [...prev, userId],
     );
   };
 
   useEffect(() => {
     localStorage.setItem(
       `selectedUsers_${taskId}`,
-      JSON.stringify(selectedUsers)
+      JSON.stringify(selectedUsers),
     );
   }, [selectedUsers, taskId]);
 
@@ -132,7 +133,7 @@ const CreateContributors: React.FC<CreateContributorsProps> = ({
 
   // Function to handle page size change
   const handlePageSizeChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
+    event: React.ChangeEvent<HTMLSelectElement>,
   ) => {
     setPageSize(Number(event.target.value));
     setPage(1); // Reset to first page when page size changes
@@ -223,13 +224,13 @@ const CreateContributors: React.FC<CreateContributorsProps> = ({
                                 className="h-4 w-4 text-primary focus:ring-blue-500 border-gray-300 rounded"
                                 checked={
                                   usersData?.data?.result?.every((user: any) =>
-                                    selectedUsers.includes(user.id)
+                                    selectedUsers.includes(user.id),
                                   ) && usersData?.data?.result?.length > 0
                                 }
                                 onChange={(e) => {
                                   const allVisibleIds =
                                     usersData?.data?.result?.map(
-                                      (user: any) => user.id
+                                      (user: any) => user.id,
                                     ) || [];
                                   if (e.target.checked) {
                                     setSelectedUsers((prev) => [
@@ -238,8 +239,8 @@ const CreateContributors: React.FC<CreateContributorsProps> = ({
                                   } else {
                                     setSelectedUsers((prev) =>
                                       prev.filter(
-                                        (id) => !allVisibleIds.includes(id)
-                                      )
+                                        (id) => !allVisibleIds.includes(id),
+                                      ),
                                     );
                                   }
                                 }}
@@ -333,6 +334,28 @@ const CreateContributors: React.FC<CreateContributorsProps> = ({
                                 </svg>
                               </button>
                             </th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Score
+                              <button
+                                type="button"
+                                className="ml-1 focus:outline-none"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 w-4 inline-block"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 9l4-4 4 4m0 6l-4 4-4-4"
+                                  />
+                                </svg>
+                              </button>
+                            </th>
                             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Status
                               <button
@@ -388,6 +411,11 @@ const CreateContributors: React.FC<CreateContributorsProps> = ({
                               <td className="px-4 py-2 whitespace-nowrap text-xs">
                                 <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                   {memberType}
+                                </span>
+                              </td>
+                                  <td className="px-4 py-2 whitespace-nowrap text-xs">
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                  {user?.score?.score}
                                 </span>
                               </td>
                               {/* Removed the duplicate email column here */}
@@ -459,7 +487,7 @@ const CreateContributors: React.FC<CreateContributorsProps> = ({
                         </button>
                         {Array.from(
                           { length: totalPages },
-                          (_, i) => i + 1
+                          (_, i) => i + 1,
                         ).map((p) => (
                           <button
                             type="button"
@@ -502,9 +530,9 @@ const CreateContributors: React.FC<CreateContributorsProps> = ({
                   </>
                 ) : (
                   <div className="relative flex flex-col items-center justify-center py-8">
-                    <img 
-                      src="/empty.svg" 
-                      alt="No users found" 
+                    <img
+                      src="/empty.svg"
+                      alt="No users found"
                       className="w-32 h-32 opacity-50"
                     />
                   </div>
@@ -560,8 +588,8 @@ const CreateContributors: React.FC<CreateContributorsProps> = ({
                                 if (e.target.checked) {
                                   setSelectedUsers(
                                     selectedUserDetails.map(
-                                      (user: any) => user.id
-                                    )
+                                      (user: any) => user.id,
+                                    ),
                                   );
                                 } else {
                                   // This is tricky: if you uncheck "all" here, it might unselect *all* selected users
@@ -572,8 +600,8 @@ const CreateContributors: React.FC<CreateContributorsProps> = ({
                                       (id) =>
                                         !selectedUserDetails
                                           .map((user: any) => user.id)
-                                          .includes(id)
-                                    )
+                                          .includes(id),
+                                    ),
                                   );
                                 }
                               }}

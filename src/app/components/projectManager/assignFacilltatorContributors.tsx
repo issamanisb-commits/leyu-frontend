@@ -13,7 +13,7 @@ import {
   userFacilltatorContributorsFiltered,
 } from "@/lib/hooks/useFetchUser";
 import { toast } from "sonner";
-import { UserTask } from "@/app/types/global";
+import { TaskMembers, UserTask } from "@/app/types/global";
 import { FilterComponent } from "@/components/ui/filterComponent";
 
 interface AssignFacilltatorContributorsProps {
@@ -21,7 +21,7 @@ interface AssignFacilltatorContributorsProps {
   taskID: string;
   open: boolean;
   setopen?: (open: boolean) => void;
-  selectedFacilitator?: UserTask | null;
+  selectedFacilitator?: TaskMembers | null;
 }
 
 const AssignFacilltatorContributors: React.FC<
@@ -32,7 +32,7 @@ const AssignFacilltatorContributors: React.FC<
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
   const debouncedTaskSearch = useDebounce(taskSearchQuery, 500);
   const [filters, setFilters] = useState<{ [key: string]: string | boolean }>(
-    {}
+    {},
   );
   const [verificationStatus, setVerificationStatus] = useState<string>();
   const {
@@ -49,9 +49,17 @@ const AssignFacilltatorContributors: React.FC<
   });
 
   // Type guard to ensure usersData has the correct structure
-  const hasValidData = (data: any): data is { data: { result: UserTask[]; total: number } } => {
-    return data && typeof data === 'object' && 'data' in data && 
-           data.data && typeof data.data === 'object' && 'result' in data.data;
+  const hasValidData = (
+    data: any,
+  ): data is { data: { result: UserTask[]; total: number } } => {
+    return (
+      data &&
+      typeof data === "object" &&
+      "data" in data &&
+      data.data &&
+      typeof data.data === "object" &&
+      "result" in data.data
+    );
   };
 
   // State to cache all users fetched across different pages
@@ -60,7 +68,6 @@ const AssignFacilltatorContributors: React.FC<
   // Refetch data when dialog opens
   useEffect(() => {
     if (open) {
-     
       refetch();
     }
   }, [open, refetch]);
@@ -70,7 +77,7 @@ const AssignFacilltatorContributors: React.FC<
       setCachedUsers((prev) => {
         const newUsers = usersData.data.result.filter(
           (newUser: UserTask) =>
-            !prev.some((cachedUser) => cachedUser.id === newUser.id)
+            !prev.some((cachedUser) => cachedUser.id === newUser.id),
         );
         return [...prev, ...newUsers];
       });
@@ -83,7 +90,7 @@ const AssignFacilltatorContributors: React.FC<
     e.preventDefault();
     try {
       await addUSerMutation.mutateAsync({
-        facilitator_id: selectedFacilitator?.user.id || "",
+        facilitator_id: selectedFacilitator?.id || "",
         contributor_ids: selectedUsers,
         taskId: taskID,
       });
@@ -108,39 +115,40 @@ const AssignFacilltatorContributors: React.FC<
     { accessorKey: "phone_number", header: "Phone number" },
     { accessorKey: "gender", header: "Gender" },
     { accessorKey: "is_active", header: "Active" },
+    { accessorKey: "referral_code", header: "Referral code" },
   ];
   const handleToggleUser = (userId: string) => {
     setSelectedUsers((prev) =>
       prev.includes(userId)
         ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
+        : [...prev, userId],
     );
   };
 
   useEffect(() => {
     localStorage.setItem(
       `selectedUsers_${taskID}`,
-      JSON.stringify(selectedUsers)
+      JSON.stringify(selectedUsers),
     );
   }, [selectedUsers, taskID]);
 
   // Derive selectedUserDetails from the cachedUsers array
   const selectedUserDetails = cachedUsers.filter((user) =>
-    selectedUsers.includes(user.id)
+    selectedUsers.includes(user.id),
   );
 
   const totalUsers = hasValidData(usersData) ? usersData.data.total : 0;
   const totalPages = Math.ceil(totalUsers / pageSize);
 
   const handlePageSizeChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
+    event: React.ChangeEvent<HTMLSelectElement>,
   ) => {
     setPageSize(Number(event.target.value));
     setPage(1);
   };
   const handleFilterChange = (
     newFilters: { [key: string]: string | boolean },
-    endpoint: string
+    endpoint: string,
   ) => {
     setFilters(newFilters);
     setPage(1);
@@ -151,8 +159,8 @@ const AssignFacilltatorContributors: React.FC<
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">
             Add Contributors to{" "}
-            {selectedFacilitator?.user.first_name ||
-              selectedFacilitator?.user.email ||
+            {selectedFacilitator?.first_name ||
+              selectedFacilitator?.email ||
               "Facilitator"}
           </DialogTitle>
         </DialogHeader>
@@ -220,7 +228,8 @@ const AssignFacilltatorContributors: React.FC<
 
                 {isUserLoading ? (
                   <div className="text-center py-4">Loading users...</div>
-                ) : hasValidData(usersData) && usersData.data.result.length > 0 ? (
+                ) : hasValidData(usersData) &&
+                  usersData.data.result.length > 0 ? (
                   <>
                     <div className="max-h-60 overflow-y-auto border border-gray-100 rounded-md">
                       <table className="min-w-full divide-y divide-gray-200">
@@ -234,14 +243,14 @@ const AssignFacilltatorContributors: React.FC<
                                   hasValidData(usersData) &&
                                   usersData.data.result.every(
                                     (user: UserTask) =>
-                                      selectedUsers.includes(user.id)
+                                      selectedUsers.includes(user.id),
                                   ) &&
                                   usersData.data.result.length > 0
                                 }
                                 onChange={(e) => {
                                   const allVisibleIds = hasValidData(usersData)
                                     ? usersData.data.result.map(
-                                        (user: UserTask) => user.id
+                                        (user: UserTask) => user.id,
                                       )
                                     : [];
                                   if (e.target.checked) {
@@ -251,8 +260,8 @@ const AssignFacilltatorContributors: React.FC<
                                   } else {
                                     setSelectedUsers((prev) =>
                                       prev.filter(
-                                        (id) => !allVisibleIds.includes(id)
-                                      )
+                                        (id) => !allVisibleIds.includes(id),
+                                      ),
                                     );
                                   }
                                 }}
@@ -371,50 +380,51 @@ const AssignFacilltatorContributors: React.FC<
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {(hasValidData(usersData) ? usersData.data.result : []).map(
-                            (user: UserTask) => (
-                              <tr
-                                key={user.id}
-                                className="hover:bg-gray-50 cursor-pointer"
-                                onClick={() => handleToggleUser(user.id)}
-                              >
-                                <td className="px-4 py-2 whitespace-nowrap text-xs">
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedUsers.includes(user.id)}
-                                    onChange={() => handleToggleUser(user.id)}
-                                    className="h-4 w-4 text-primary focus:ring-blue-500 border-gray-300 rounded"
-                                  />
-                                </td>
-                                <td className="px-4 py-2 whitespace-nowrap text-xs">
-                                  {user.first_name || "No name"}{" "}
-                                  {user.last_name || ""}
-                                </td>
-                                <td className="px-4 py-2 whitespace-nowrap text-xs">
-                                  {user.email}
-                                </td>
-                                <td className="px-4 py-2 whitespace-nowrap text-xs">
-                                  {user.phone_number || ""}
-                                </td>
-                                <td className="px-4 py-2 whitespace-nowrap text-xs">
-                                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                    {user.role || "Contributor"}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-2 whitespace-nowrap text-xs">
-                                  <span
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                      user.is_active
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-gray-100 text-gray-800"
-                                    }`}
-                                  >
-                                    {user.is_active ? "Active" : "Inactive"}
-                                  </span>
-                                </td>
-                              </tr>
-                            )
-                          )}
+                          {(hasValidData(usersData)
+                            ? usersData.data.result
+                            : []
+                          ).map((user: UserTask) => (
+                            <tr
+                              key={user.id}
+                              className="hover:bg-gray-50 cursor-pointer"
+                              onClick={() => handleToggleUser(user.id)}
+                            >
+                              <td className="px-4 py-2 whitespace-nowrap text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedUsers.includes(user.id)}
+                                  onChange={() => handleToggleUser(user.id)}
+                                  className="h-4 w-4 text-primary focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap text-xs">
+                                {user.first_name || "No name"}{" "}
+                                {user.last_name || ""}
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap text-xs">
+                                {user.email}
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap text-xs">
+                                {user.phone_number || ""}
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap text-xs">
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                  {user.role || "Contributor"}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap text-xs">
+                                <span
+                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    user.is_active
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-gray-100 text-gray-800"
+                                  }`}
+                                >
+                                  {user.is_active ? "Active" : "Inactive"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -470,7 +480,7 @@ const AssignFacilltatorContributors: React.FC<
                         </button>
                         {Array.from(
                           { length: totalPages },
-                          (_, i) => i + 1
+                          (_, i) => i + 1,
                         ).map((p) => (
                           <button
                             type="button"
@@ -513,9 +523,9 @@ const AssignFacilltatorContributors: React.FC<
                   </>
                 ) : (
                   <div className="relative flex flex-col items-center justify-center py-8">
-                    <img 
-                      src="/empty.svg" 
-                      alt="No users found" 
+                    <img
+                      src="/empty.svg"
+                      alt="No users found"
                       className="w-32 h-32 opacity-50"
                     />
                   </div>
@@ -570,7 +580,7 @@ const AssignFacilltatorContributors: React.FC<
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   setSelectedUsers(
-                                    selectedUserDetails.map((user) => user.id)
+                                    selectedUserDetails.map((user) => user.id),
                                   );
                                 } else {
                                   setSelectedUsers((prev) =>
@@ -578,8 +588,8 @@ const AssignFacilltatorContributors: React.FC<
                                       (id) =>
                                         !selectedUserDetails
                                           .map((user) => user.id)
-                                          .includes(id)
-                                    )
+                                          .includes(id),
+                                    ),
                                   );
                                 }
                               }}

@@ -80,16 +80,25 @@ const Sidebar: React.FC<SidebarProps> = ({
       `}</style>
       {/* Logo and Toggle Button */}
       <div className="mb-10 flex items-center justify-between">
-        {isOpen && (
-          <Image
-            src="/logo/leyu.png"
-            alt="Logo"
-            width={120}
-            height={40}
-            className="mb-6"
-            priority // Add priority for faster loading
-          />
-        )}
+        <div className="flex flex-col items-center">
+          {isOpen && (
+            <>
+              <Image
+                src="/logo/leyu.png"
+                alt="Logo"
+                width={110}
+                height={35}
+                className="mb-2"
+                priority // Add priority for faster loading
+              />
+              {effectiveRole && (
+                <span className="text-xs font-medium text-gray-600 capitalize">
+                  {effectiveRole}
+                </span>
+              )}
+            </>
+          )}
+        </div>
         {isMobile && (
           <button onClick={toggleSidebar} className="p-2">
             <ArrowLeft className="h-6 w-6 text-gray-700" />

@@ -39,6 +39,7 @@ import {
   Play,
   Pause,
   MoreHorizontal,
+  Pencil,
 } from "lucide-react";
 import {
   ColumnDef,
@@ -56,6 +57,9 @@ import type { SortingState } from "@tanstack/react-table";
 import TaskDataset from "./microTaskDataset";
 import { FilterComponent } from "@/components/ui/filterComponent";
 import AddMicroTaskDialog from "./addMicroTaskDialog";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface MicroTaskListProps {
   taskId: string;
@@ -79,6 +83,11 @@ interface MicroTaskListProps {
   }) => void;
   onSubmitCsv?: (uploadData: { file: File }) => void;
   onSubmitAudio?: (uploadData: {
+    files: File[];
+    is_test: boolean;
+    instruction: string;
+  }) => void;
+  onSubmitImage?: (uploadData: {
     files: File[];
     is_test: boolean;
     instruction: string;
@@ -270,6 +279,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   onSubmitSingle,
   onSubmitCsv,
   onSubmitAudio,
+  onSubmitImage,
   onSubmitTask,
 }) => {
  
@@ -277,6 +287,54 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   const [filters, setFilters] = useState<{ [key: string]: string | boolean }>(
     {}
   );
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
+
+  // Edit modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingMicroTask, setEditingMicroTask] = useState<MicroTask | null>(null);
+  const [editForm, setEditForm] = useState({ text: "", instruction: "",is_test:false });
+  const [isEditSubmitting, setIsEditSubmitting] = useState(false);
+
+  const handleOpenEdit = (microTask: MicroTask) => {
+    setEditingMicroTask(microTask);
+    setEditForm({
+      text: microTask.text || "",
+      instruction: microTask.instruction || "",
+      is_test:microTask.is_test || false
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editingMicroTask || !session?.access_token) return;
+    setIsEditSubmitting(true);
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/workspace/micro-task/${editingMicroTask.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ text: editForm.text, instruction: editForm.instruction,is_test:editForm.is_test }),
+        }
+      );
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err?.message || "Failed to update micro task");
+      }
+      toast.success("Micro task updated successfully!");
+      setIsEditModalOpen(false);
+      setEditingMicroTask(null);
+      queryClient.invalidateQueries({ queryKey: ["microTasks"] });
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update micro task");
+    } finally {
+      setIsEditSubmitting(false);
+    }
+  };
   const {
     data: microtasksData,
     isLoading: isMicroTaskLoading,
@@ -291,7 +349,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   });
   const [isOpenDeletor, setIsOpenDeletor] = useState(false);
   const microtasks: MicroTask[] = Array.isArray(microtasksData?.data?.result)
-    ? microtasksData.data.result
+    ? (microtasksData?.data?.result ?? [])
     : [];
   const microTaskTotalElements = microtasksData?.data?.total || 0;
   const microTaskTotalPages = microtasksData?.data?.totalPages || 1;
@@ -342,29 +400,16 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
         </div>
       ),
     },
-    // {
-    //   accessorKey: "type",
-    //   header: "Type",
-    //   enableSorting: true,
-    //   cell: ({ row }) => (
-    //     <div className="min-w-[80px]">{row.original.type}</div>
-    //   ),
-    // },
-    // {
-    //   accessorKey: "instruction",
-    //   header: "Instruction",
-    //   enableSorting: false,
-    // },
-    // {
-    //   accessorKey: "is_test",
-    //   header: "Test",
-    //   enableSorting: true,
-    //   cell: ({ row }) => (
-    //     <div className="min-w-[50px]">
-    //       {row.original.is_test ? "true" : "false"}
-    //     </div>
-    //   ),
-    // },
+       {
+      accessorKey: "Test",
+      header: "Test",
+      enableSorting: true,
+      cell: ({ row }) => (
+        <div className="min-w-[150px] max-w-[300px] truncate">
+          {(row.original.is_test? "True":"False" )}
+        </div>
+      ),
+    },
     {
       accessorKey: "audio",
       header: (props) => (
@@ -481,7 +526,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
           );
         } else {
           return (
-            <div className="min-w-[100px] text-center text-gray-400">
+            <div className="min-w-[100px]  text-gray-400">
               No audio
             </div>
           );
@@ -489,8 +534,61 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
       },
     },
     {
+      accessorKey: "image",
+      header: (props) => (
+        <div className="text-center align-middle justify-center">Image</div>
+      ),
+      enableSorting: false,
+      cell: ({ row }) => {
+        const imageUrl = row.original.file_path;
+
+        if (row.original.type === "image" && imageUrl) {
+          return (
+            <Dialog>
+              <DialogTrigger asChild>
+                <div className="flex items-center gap-2 min-w-[120px] mt-2 mb-2 cursor-pointer hover:opacity-80 transition-opacity">
+                  <img
+                    src={imageUrl}
+                    alt="Micro task image"
+                    className="w-16 h-16 object-cover rounded border border-gray-200"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/imageNotAvailable.png";
+                    }}
+                  />
+                  <div className="text-xs text-gray-500 truncate max-w-[100px]">
+                    {imageUrl.split('/').pop()?.split('?')[0] || "image"}
+                  </div>
+                </div>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl">
+                <DialogHeader>
+                  <DialogTitle>Image Preview</DialogTitle>
+                </DialogHeader>
+                <div className="flex justify-center items-center">
+                  <img
+                    src={imageUrl}
+                    alt="Micro task image preview"
+                    className="max-h-[70vh] w-auto object-contain rounded"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/imageNotAvailable.png";
+                    }}
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+          );
+        } else {
+          return (
+            <div className="min-w-[100px] text-gray-400">
+              No image
+            </div>
+          );
+        }
+      },
+    },
+    {
       accessorKey: "",
-      header: "submission",
+      header: "Submission",
       enableSorting: true,
       cell: ({ row }: { row: { original: MicroTask } }) => {
         return (
@@ -526,6 +624,13 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
           >
             <Eye className="h-4 w-4" />
           </button>
+          <button
+            onClick={() => handleOpenEdit(row.original)}
+            className="border mr-2 border-gray-100 text-gray-500 hover:text-blue-600 transition-colors p-1 rounded hover:bg-blue-50"
+            title="Edit Micro Task"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
         </>
       ),
     },
@@ -543,6 +648,19 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
     if (
       (taskType === "text-audio" || taskType === "text-text") &&
       key === "audio"
+    ) {
+      return false;
+    }
+    // Hide text and audio columns for image tasks
+    if (taskType === "image-text" || taskType === "image-audio") {
+      if (key === "text" || key === "audio") {
+        return false;
+      }
+    }
+    // Hide image column for non-image tasks
+    if (
+      (taskType === "text-text" || taskType === "text-audio" || taskType === "audio-text") &&
+      key === "image"
     ) {
       return false;
     }
@@ -597,6 +715,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
               onSubmitSingle &&
               onSubmitCsv &&
               onSubmitAudio &&
+              onSubmitImage &&
               onSubmitTask && (
                 <AddMicroTaskDialog
                   taskMetadata={taskMetadata}
@@ -606,6 +725,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                   onSubmitSingle={onSubmitSingle}
                   onSubmitCsv={onSubmitCsv}
                   onSubmitAudio={onSubmitAudio}
+                  onSubmitImage={onSubmitImage}
                   onSubmitTask={onSubmitTask}
                 />
               )}
@@ -644,6 +764,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
               onSubmitSingle &&
               onSubmitCsv &&
               onSubmitAudio &&
+              onSubmitImage &&
               onSubmitTask && (
                 <AddMicroTaskDialog
                   taskMetadata={taskMetadata}
@@ -653,6 +774,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                   onSubmitSingle={onSubmitSingle}
                   onSubmitCsv={onSubmitCsv}
                   onSubmitAudio={onSubmitAudio}
+                  onSubmitImage={onSubmitImage}
                   onSubmitTask={onSubmitTask}
                 />
               )}
@@ -843,6 +965,26 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                       </div>
                     )}
 
+                  {/* Image File */}
+                  {selectedMicroTask.type === "image" &&
+                    selectedMicroTask.file_path && (
+                      <div className=" mt-4">
+                        <label className="block text-sm font-medium text-black mb-2">
+                          Image
+                        </label>
+                        <div className="flex justify-center">
+                          <img
+                            src={selectedMicroTask.file_path}
+                            alt="Micro task image"
+                            className="w-80 h-auto rounded-lg border border-gray-200"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "/imageNotAvailable.png";
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
                   {selectedMicroTask.instruction && (
                     <div className="">
                       <label className="block  font-medium text-black mb-2 mt-3">
@@ -857,10 +999,8 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                   )}
                 </div>
               </div>
-              <div>{/* Task Content */}</div>
-              {/* Instruction */}
-
-              {/* Close Button */}
+        
+          
               <div className="flex justify-end pt-4">
                 <Button
                   variant="outline"
@@ -908,42 +1048,55 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                   task_id={selectedMicroTask.id}
                   task_name={""} // Add this line
                 />
-                {/* <Button
-                  variant="outline"
-                  className="ml-2 bg-white text-primary !border-primary hover:bg-gray-100 rounded-lg px-4 py-2"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 20 20"
-                    fill="none"
-                  >
-                    <path
-                      d="M11.7282 3.23796C12.3492 2.56515 12.6597 2.22875 12.9896 2.03252C13.7857 1.55905 14.766 1.54432 15.5754 1.99368C15.9108 2.17991 16.2308 2.50685 16.8709 3.16071C17.511 3.81458 17.8311 4.14151 18.0133 4.48419C18.4532 5.31101 18.4388 6.31241 17.9753 7.12566C17.7832 7.46271 17.4539 7.7799 16.7953 8.41425L8.95892 15.962C7.71082 17.1642 7.08675 17.7652 6.3068 18.0698C5.52685 18.3745 4.66942 18.3521 2.95455 18.3072L2.72123 18.3012C2.19917 18.2875 1.93814 18.2807 1.78641 18.1084C1.63467 17.9362 1.65538 17.6703 1.69682 17.1386L1.71932 16.8498C1.83592 15.353 1.89422 14.6047 2.18651 13.9319C2.47878 13.2592 2.98295 12.713 3.99127 11.6205L11.7282 3.23796Z"
-                      stroke="#095FAF"
-                      strokeWidth="1.25"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M10.8333 3.33325L16.6666 9.16659"
-                      stroke="#095FAF"
-                      strokeWidth="1.25"
-                      strokeLinejoin="round"
-                    />
-                    <path
-                      d="M11.6667 18.3333H18.3334"
-                      stroke="#095FAF"
-                      strokeWidth="1.25"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  Edit
-                </Button> */}
+              
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Micro Task Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[500px] bg-white">
+          <DialogHeader>
+            <DialogTitle>Edit Micro Task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Test
+              </label>
+               <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editForm.is_test}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, is_test: e.target.checked }))}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-gray-700">Mark as test task</span>
+                </label>
+
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsEditModalOpen(false)}
+                disabled={isEditSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleEditSubmit}
+                disabled={isEditSubmitting}
+              >
+                {isEditSubmitting ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>

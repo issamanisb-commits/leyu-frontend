@@ -48,7 +48,7 @@ export interface DecodedToken {
   exp: number;
 }
 
-export type UserRole = "SuperAdmin" | "ProjectManager" | "Facilitator" | "Reviewer";
+export type UserRole = "SuperAdmin" | "ProjectManager" | "Facilitator" | "Reviewer" | "QualityAssurance";
 
 export interface ExtendedUser extends NextAuthUser {
   id: string;

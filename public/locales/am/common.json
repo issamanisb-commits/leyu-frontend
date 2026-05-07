@@ -1,0 +1,38 @@
+{
+  "common": {
+    "save": "ቁምጣጥ",
+    "cancel": "ይቅር",
+    "delete": "ሰርዝ",
+    "edit": "ማስተካከል",
+    "add": "ጨምር",
+    "back": "ወደ ኋላ",
+    "next": "ቀጣይ",
+    "previous": "ቀዳሚ",
+    "search": "ፈልግ",
+    "filter": "ማጣሪያ",
+    "apply": "ተግብር",
+    "clear": "ንጽህ",
+    "loading": "በመጫን ላይ...",
+    "error": "ስህተት",
+    "success": "ስኬት",
+    "warning": "ማስጠንቀቂያ",
+    "info": "መረጃ"
+  },
+  "navigation": {
+    "dashboard": "ዳሽቦርድ",
+    "projects": "ፕሮጀክቶች",
+    "tasks": "ተግባራት",
+    "settings": "ቅንብሮች",
+    "logout": "ውጣ",
+    "profile": "መገለጫ"
+  },
+  "buttons": {
+    "submit": "ስሌት",
+    "approve": "ፍቀድ",
+    "reject": "ውድቅ",
+    "flag": "ሰንደቅ",
+    "view": "ተመልከት",
+    "download": "ዝርጋ",
+    "upload": "ሰቅል"
+  }
+}

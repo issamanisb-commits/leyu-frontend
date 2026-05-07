@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import Sidebar from "@/app/components/layout/Sidebar";
 import TopBar from "@/app/components/layout/TopBar";
+import { useTranslation } from "@/lib/hooks/useTranslation";
+
 export default function DashboardLayout({
   children,
 }: {
@@ -9,6 +11,7 @@ export default function DashboardLayout({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const { t } = useTranslation();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -47,7 +50,7 @@ export default function DashboardLayout({
         }`}
       >
         <TopBar
-          title="Account Setting"
+          title={t('accountSetting')}
           toggleSidebarAction={toggleSidebar}
           isMobile={isMobile}
           isSidebarOpen={isSidebarOpen}

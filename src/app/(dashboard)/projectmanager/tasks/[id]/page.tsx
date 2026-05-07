@@ -11,7 +11,7 @@ import {
   useRemoveTaskUser,
   useToggleActivateTaskUser,
 } from "@/lib/hooks/useProject";
-import { UserData } from "@/app/types/global";
+import { TaskMembers, UserData } from "@/app/types/global";
 import { MoreHorizontal } from "lucide-react";
 import TaskDatasetSubmit from "@/app/components/projectManager/microTaskDatasetSubmit";
 import { useDebounce } from "@/lib/hooks/useDebounce";
@@ -23,7 +23,7 @@ import MicroTaskList from "@/app/components/projectManager/microTaskList";
 import { useQuery } from "@tanstack/react-query";
 import { useBasedataall } from "@/lib/hooks/useBasedata";
 import { useSession } from "next-auth/react";
-import { UserTask } from "@/app/types/global";
+import { UserTask,UserTaskSpecfic } from "@/app/types/global";
 import { TaskInstructions } from "@/app/types/project";
 import CreateTaskInstruction from "@/app/components/projectManager/createTaskInstruction";
 import InstructionView from "@/app/components/projectManager/instructionView";
@@ -36,6 +36,7 @@ import {
   useAddMicroTasksFromCsv,
   useAddMicroTasksFromAudio,
   useInvitation,
+  useAddMicroTasksFromImage,
 } from "@/lib/hooks/useMicrotask";
 import {
   Table,
@@ -60,6 +61,7 @@ import {
   Copy,
   Plus,
   Users,
+  UserPlus,
   Link2,
   ChevronDown,
 } from "lucide-react";
@@ -87,12 +89,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialogBig";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/app/components/ui/dropdown-menu";
 import TaskDataset from "@/app/components/projectManager/taskDataset";
 import AssignFacilltatorContributors from "@/app/components/projectManager/assignFacilltatorContributors";
 import ShowFacilltatorContributors from "@/app/components/projectManager/showFacilltatorContributors";
 import ScheduleDistribution from "@/app/components/projectManager/scheduleDistribution";
 import ExportUserTask from "@/app/components/projectManager/exportUserTask";
 import { set } from "date-fns";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 interface Organization {
   id: string;
   name: string;
@@ -109,6 +118,8 @@ interface InvitationLink {
   organization: string;
   link: string;
   dateCreated: string;
+  max_invitations?: string;
+  expiry_date?: string;
 }
 
 interface PaginationProps {
@@ -123,25 +134,26 @@ interface PaginationProps {
 const TaskDetailPage: React.FC = () => {
   const params = useParams();
   const taskId = params.id as string;
+  const { t } = useTranslation();
   const [showFormFacilitator, setShowFormFacilitator] = useState(false);
   const [showListFacilitator, setListFormFacilitator] = useState(false);
   const [selectedFacilitator, setSelectedFacilitator] =
-    useState<UserTask | null>(null);
-  const [showForm, setShowForm] = useState(false);
+    useState<TaskMembers | null>(null);
+  // const [showForm, setShowForm] = useState(false);
   const { data: taskData, isLoading: isTaskLoading, error } = useTask(taskId);
   const task = taskData?.data;
-  const [formDataTask, setFormDataTask] = useState({
-    source_task_id: "",
-    targetTaskId: "",
-    from_micro_task: false,
-    from_data_set: true,
-  });
-  const [formData, setFormData] = useState({
-    title: "",
-    instruction: "",
-    text: "",
-    task_id: taskId,
-  });
+  // const [formDataTask, setFormDataTask] = useState({
+  //   source_task_id: "",
+  //   targetTaskId: "",
+  //   from_micro_task: false,
+  //   from_data_set: true,
+  // });
+  // const [formData, setFormData] = useState({
+  //   title: "",
+  //   instruction: "",
+  //   text: "",
+  //   task_id: taskId,
+  // });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isDropdownOpenReviewer, setIsDropdownOpenReviewer] = useState(false);
   const [activeTab, setActiveTab] = useState<
@@ -176,7 +188,7 @@ const TaskDetailPage: React.FC = () => {
   >(undefined);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [contributor_id, setContributor_id] = useState("");
-  const [selectedUser, setSelectedUser] = useState<UserTask["user"] | null>(
+  const [selectedUser, setSelectedUser] = useState<TaskMembers | null>(
     null,
   );
   const [microTaskVerificationStatus, setMicroTaskVerificationStatus] =
@@ -200,7 +212,7 @@ const TaskDetailPage: React.FC = () => {
     useState(false);
   const [memebrType, setMemebrType] = useState<string>("");
   const [roleSearch, setRoleSearch] = useState<
-    "Contributor" | "Reviewer" | "Facilitator"
+    "Contributor" | "Reviewer" | "Facilitator" | "QualityAssurance"
   >("Facilitator");
   const [isInstructionFullScreen, setIsInstructionFullScreen] = useState(false);
   const [selectedInstruction, setSelectedInstruction] = useState<any>(null);
@@ -211,6 +223,10 @@ const TaskDetailPage: React.FC = () => {
       setIsInstructionFullScreen(true);
     }, 100);
   };
+  const [orderBy, setOrderBy] = useState<string>("");
+  const [orderDirection, setOrderDirection] = useState<
+    "ASC" | "DESC" | undefined
+  >(undefined);
 
   const { data: usersData, isLoading: isUserLoading } = useGetTaskUserDetail({
     userPage,
@@ -219,6 +235,8 @@ const TaskDetailPage: React.FC = () => {
     taskId,
     role: roleSearch,
     verificationStatus: userVerificationStatus,
+    order_by: orderBy,
+    order_direction: orderDirection,
   });
   const [scheduleformData, setScheduleFormData] = useState({
     startDate: "",
@@ -233,7 +251,7 @@ const TaskDetailPage: React.FC = () => {
     }
   };
 
-  const users: UserTask[] = usersData?.data?.result || [];
+  const users: TaskMembers[] = usersData?.data?.result || [];
   const userTotalElements = usersData?.data?.total || 0;
   const userTotalPages = usersData?.data?.totalPages || 1;
   const userStartRecord = users.length ? (userPage - 1) * userPageSize + 1 : 0;
@@ -253,6 +271,8 @@ const TaskDetailPage: React.FC = () => {
   const invitationLinks: InvitationLink[] =
     invitationData?.data?.result?.map((invitation: any) => ({
       id: invitation.id,
+      max_invitations: invitation.max_invitations,
+      expiry_date: invitation.expiry_date,
       organization: invitation.organization?.name || "Unknown",
       link: `${process.env.NEXT_PUBLIC_BASE_URL}/linkForm/${invitation.role.toLowerCase()}/${invitation.id}`,
       dateCreated: formatDateMedium(invitation.created_date),
@@ -390,16 +410,16 @@ const TaskDetailPage: React.FC = () => {
       name: organization.name,
     })) || [];
 
-  const userColumns: ColumnDef<UserTask>[] = [
+  const userColumns: ColumnDef<TaskMembers>[] = [
     {
       accessorKey: "fullName",
       header: "Full Name",
       enableSorting: true,
-      cell: ({ row }: { row: Row<UserTask> }) => (
+
+      cell: ({ row }: { row: Row<TaskMembers> }) => (
         <span className="flex items-center space-x-1">
           <span>
-            {row.original.user.first_name} {row.original.user.middle_name}{" "}
-            {row.original.user.last_name}
+            {row.original.first_name} {row.original.last_name}
           </span>
         </span>
       ),
@@ -408,34 +428,10 @@ const TaskDetailPage: React.FC = () => {
       accessorKey: "phoneNumber",
       header: "Phone Number",
       enableSorting: true,
-      cell: ({ row }: { row: Row<UserTask> }) => (
+      cell: ({ row }: { row: Row<TaskMembers> }) => (
         <span className="flex items-center space-x-1">
           <span>
-            {row.original.user.phone_number
-              ? row.original.user.phone_number
-              : ""}
-          </span>
-        </span>
-      ),
-    },
-    {
-      accessorKey: "role",
-      header: "Role",
-      enableSorting: true,
-      cell: ({ row }: { row: Row<UserTask> }) => (
-        <span className="flex items-center space-x-1">
-          <span
-            className={`py-2 px-2 rounded-2xl ${
-              row.original.role?.toLowerCase() === "reviewer"
-                ? "bg-[#FCEFFF] text-[#8500A3]"
-                : row.original.role?.toLowerCase() === "contributor"
-                  ? "bg-[#ECF6FF] text-[#095FAF]"
-                  : row.original.role?.toLowerCase() === "facilitator"
-                    ? "text-[#3F3748] bg-[#F2F4F7]"
-                    : "text-[#3F3748] bg-[#F2F4F7]"
-            }`}
-          >
-            {row.original.role}
+            {row.original.phone_number ? row.original.phone_number : ""}
           </span>
         </span>
       ),
@@ -444,32 +440,45 @@ const TaskDetailPage: React.FC = () => {
       accessorKey: "email",
       header: "Email",
       enableSorting: true,
-      cell: ({ row }: { row: Row<UserTask> }) => (
+      cell: ({ row }: { row: Row<TaskMembers> }) => (
         <span className="flex items-center space-x-1">
-          <span
-            className={`h-2 w-2 rounded-full ${
-              row.original.status?.toLowerCase() === "active"
-                ? "bg-green-500"
-                : "bg-purple-500"
-            }`}
-          ></span>
-          <span>{row.original.user.email}</span>
+          <span>{row.original.email}</span>
         </span>
       ),
     },
+    ...(roleSearch === "Facilitator"
+      ? [
+          {
+            accessorKey: "referral_code",
+            header: "Referral code",
+            enableSorting: true,
+            cell: ({ row }: { row: Row<TaskMembers> }) => (
+              <span className="flex items-center space-x-1">
+                <span>
+                  {row.original.referral_code
+                    ? row.original.referral_code
+                    : row.original.referral_code}
+                </span>
+              </span>
+            ),
+          },
+        ]
+      : []),
+
     ...(roleSearch === "Contributor"
       ? [
           {
             accessorKey: "Submissions",
             header: "Submissions",
             enableSorting: true,
-            cell: ({ row }: { row: Row<UserTask> }) => (
+            cell: ({ row }: { row: Row<TaskMembers> }) => (
               <span className="flex items-center space-x-1">
                 <Button
                   className={`text-white px-2 py-2 bg-primary rounded-2xl`}
                   onClick={() => {
-                    setContributor_id(row.original.user.id);
-                    setSelectedUser(row.original.user);
+                    setContributor_id(row.original.id);
+                    setSelectedUser(null);
+                    setSelectedUser(row.original);
                     setTimeout(() => {
                       setUserSubmissionsView(true);
                     }, 20);
@@ -496,6 +505,16 @@ const TaskDetailPage: React.FC = () => {
             }`}
           ></span>
           <span>{row.original.status}</span>
+        </span>
+      ),
+    },
+    {
+      accessorKey: "score",
+      header: "Score",
+      enableSorting: true,
+      cell: ({ row }: { row: Row<TaskMembers> }) => (
+        <span className="flex items-center space-x-1">
+          <span className={`py-2 px-2 rounded-2xl`}>{row.original.score}</span>
         </span>
       ),
     },
@@ -553,7 +572,7 @@ const TaskDetailPage: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  setSelectedFacilitator(row.original);
+                  setSelectedFacilitator({ ...row.original });
 
                   setTimeout(() => {
                     setListFormFacilitator(true);
@@ -630,30 +649,28 @@ const TaskDetailPage: React.FC = () => {
             <DialogContent className="sm:max-w-[600px]">
               <DialogTitle></DialogTitle>
               <DialogHeader>
-                <p className="mb-8 font-bold ">User Information</p>
+                <p className="mb-8 font-bold ">{t("userInformation")}</p>
               </DialogHeader>
 
               <div className="space-y-1 pb-4 flex-row flex items-center gap-4 mt-7">
                 <img
-                  src={row.original.user?.image || "/default-avatar.png"}
+                  src={"/default-avatar.png"}
                   alt="User"
                   className="w-17 h-17 mt-2 mb-2 rounded-full"
                 />
 
                 <div>
                   <h2 className="text-xl font-semibold">
-                    {row.original.user.first_name} {row.original.user.last_name}
+                    {row.original.first_name} {row.original.last_name}
                   </h2>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-600">
-                      {row.original.user.email}
-                    </span>
+                    <span className="text-gray-600">{row.original.email}</span>
                   </div>
                 </div>
               </div>
               <div className="">
                 <DialogHeader>
-                  <p className="mb-8 font-bold ">General Information</p>
+                  <p className="mb-8 font-bold ">{t("generalInformation")}</p>
                 </DialogHeader>
               </div>
               <div className="py-4">
@@ -663,7 +680,7 @@ const TaskDetailPage: React.FC = () => {
                       First Name
                     </span>
                     <span className="col-span-3 text-gray-900">
-                      {row.original.user.first_name}
+                      {row.original.first_name}
                     </span>
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4 px-4 py-3">
@@ -671,7 +688,7 @@ const TaskDetailPage: React.FC = () => {
                       Last Name(Grandfather Name)
                     </span>
                     <span className="col-span-3 text-gray-900">
-                      {row.original.user.last_name}
+                      {row.original.last_name}
                     </span>
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4 px-4 py-3">
@@ -679,7 +696,7 @@ const TaskDetailPage: React.FC = () => {
                       Email
                     </span>
                     <span className="col-span-3 text-gray-900">
-                      {row.original.user.email}
+                      {row.original.email}
                     </span>
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4 px-4 py-3">
@@ -704,9 +721,10 @@ const TaskDetailPage: React.FC = () => {
                   variant="outline"
                   className="!bg-white !text-red-500 !border-[0.5px] !border-red-500 !hover:bg-red-100 !rounded-lg !px-4 !py-2 flex items-center gap-2"
                   onClick={(e) => {
-                    setRemovedUserId(row.original.user.id);
+                    console.log("Removing user with ID:", row.original.id);
+                    setRemovedUserId(row.original.id);
                     setTimeout(() => {
-                      handleRemove(e, row.original.user.id);
+                      handleRemove(e, row.original.id);
                     }, 200);
                   }}
                   disabled={isRemoving || !session?.access_token}
@@ -717,9 +735,10 @@ const TaskDetailPage: React.FC = () => {
                   variant="outline"
                   className={`${row.original.status.toLowerCase() === "active" ? "text-red-500 !border-red-500 !hover:bg-red-100" : "text-primary"} !bg-white !border-[0.5px]  !rounded-lg !px-4 !py-2 flex items-center gap-2 hover:!bg-gray-100`}
                   onClick={(e) => {
-                    setRemovedUserId(row.original.user.id);
+                    console.log("Removing user with ID:", row.original.id);
+                    setRemovedUserId(row.original.id);
                     setTimeout(() => {
-                      handleActivateUser(e, row.original.user.id);
+                      handleActivateUser(e, row.original.id);
                     }, 200);
                   }}
                   disabled={isRemoving || !session?.access_token}
@@ -735,13 +754,16 @@ const TaskDetailPage: React.FC = () => {
       ),
     },
   ];
-
+  const today = new Date().toISOString().split("T")[0];
   const { mutate: addSingleMicroTask } = useAddSingleMicroTask({ taskId });
   const { mutate: addTaskfromOtherTask } = useImportMicroTasksFromTask({
     taskId,
   });
   const { mutate: addMicroTasksFromCsv } = useAddMicroTasksFromCsv({ taskId });
   const { mutate: addMicroTasksFromAudio } = useAddMicroTasksFromAudio({
+    taskId,
+  });
+  const { mutate: addMicroTasksFromImage } = useAddMicroTasksFromImage({
     taskId,
   });
 
@@ -776,6 +798,21 @@ const TaskDetailPage: React.FC = () => {
     // For now, let's process each file individually
     uploadData.files.forEach((file) => {
       addMicroTasksFromAudio({
+        file,
+        is_test: uploadData.is_test,
+        instruction: uploadData.instruction,
+      });
+    });
+  };
+
+  const handleImageUpload = (uploadData: {
+    files: File[];
+    is_test: boolean;
+    instruction: string;
+  }) => {
+    // Process each image file - similar to audio upload
+    uploadData.files.forEach((file) => {
+      addMicroTasksFromImage({
         file,
         is_test: uploadData.is_test,
         instruction: uploadData.instruction,
@@ -890,7 +927,7 @@ const TaskDetailPage: React.FC = () => {
   }
 
   if (!task) {
-    return <div className="p-6">Task is Loading.</div>;
+    return <div className="p-6">{t("loadingMessage")}</div>;
   }
 
   return (
@@ -904,15 +941,15 @@ const TaskDetailPage: React.FC = () => {
               task.is_closed ? "text-red-500" : "text-[#037847] bg-[#ECFDF3]"
             }`}
           >
-            {task.is_closed ? "Inactive" : "Active"}
+            {task.is_closed ? t("inactive") : t("active")}
           </span>
         </div>
 
-        <div className="mt-3 mb-3 text-sm text-gray-500">
-          <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded mr-2">
+        <div className="mt-4 mb-3 text-sm text-gray-600 ">
+          <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-2xl mr-2">
             {task.taskType?.task_type}
           </span>
-          Created on{" "}
+          {t("createdDate")}{" "}
           {task.created_date ? formatDateMedium(task.created_date) : ""}
         </div>
       </div>
@@ -928,13 +965,13 @@ const TaskDetailPage: React.FC = () => {
                 : "text-gray-500 hover:text-gray-500"
             }`}
           >
-            Overview
+            {t("overview")}
           </button>
           <button
             onClick={() => {
               setActiveTab("Micro Tasks");
-              setMicroTaskPage(1); // Reset page on tab switch
-              setTaskSearchQuery(""); // Reset search
+              setMicroTaskPage(1);
+              setTaskSearchQuery("");
             }}
             className={`py-2 px-4 text-sm font-medium ${
               activeTab === "Micro Tasks"
@@ -942,13 +979,13 @@ const TaskDetailPage: React.FC = () => {
                 : "text-gray-500 hover:text-gray-500"
             }`}
           >
-            Micro Tasks
+            {t("microTasks")}
           </button>
           <button
             onClick={() => {
               setActiveTab("Users");
-              setUserPage(1); // Reset page on tab switch
-              setUserSearchQuery(""); // Reset search
+              setUserPage(1);
+              setUserSearchQuery("");
             }}
             className={`py-2 px-4 text-sm font-medium ${
               activeTab === "Users"
@@ -956,13 +993,13 @@ const TaskDetailPage: React.FC = () => {
                 : "text-gray-500 hover:text-gray-500"
             }`}
           >
-            Users
+            {t("usersTab")}
           </button>
           <button
             onClick={() => {
               setActiveTab("submissions");
-              setUserPage(1); // Reset page on tab switch
-              setUserSearchQuery(""); // Reset search
+              setUserPage(1);
+              setUserSearchQuery("");
             }}
             className={`py-2 px-4 text-sm font-medium ${
               activeTab === "submissions"
@@ -970,7 +1007,7 @@ const TaskDetailPage: React.FC = () => {
                 : "text-gray-500 hover:text-gray-500"
             }`}
           >
-            Submissions
+            {t("submissionsHeader")}
           </button>
           <button
             onClick={() => setActiveTab("Task distribution")}
@@ -980,7 +1017,7 @@ const TaskDetailPage: React.FC = () => {
                 : "text-gray-500 hover:text-gray-500"
             }`}
           >
-            Task distribution
+            {t("taskDistribution")}
           </button>
         </nav>
       </div>
@@ -1008,6 +1045,7 @@ const TaskDetailPage: React.FC = () => {
             onSubmitSingle={handleAddSingleMicroTask}
             onSubmitCsv={handleCsvUpload}
             onSubmitAudio={handleAudioUpload}
+            onSubmitImage={handleImageUpload}
             onSubmitTask={handleTaskForTask}
           />
         </div>
@@ -1085,7 +1123,7 @@ const TaskDetailPage: React.FC = () => {
                     <div className="p-4 border-t border-gray-100">
                       <div className="space-y-4">
                         <div
-                          className={`grid ${task.is_public ? "grid-cols-2" : "grid-cols-3"} gap-4`}
+                          className={`grid ${task.is_public ? "grid-cols-3" : "grid-cols-4"} gap-4`}
                         >
                           <div className="border border-gray-100 rounded-lg p-4 bg-white ">
                             <div className="flex items-center gap-2 mb-2">
@@ -1098,9 +1136,6 @@ const TaskDetailPage: React.FC = () => {
                                 <h3 className="text-sm font-medium text-gray-900">
                                   Reviewer
                                 </h3>
-                                <p className="text-xs text-gray-500">
-                                  Invite a reviewer to provide feedback
-                                </p>
                               </div>
                             </div>
                             <button
@@ -1112,7 +1147,7 @@ const TaskDetailPage: React.FC = () => {
                               }}
                               className="w-full flex items-center justify-center px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-medium hover:bg-purple-700"
                             >
-                              <Users className="h-4 w-4 mr-2" />
+                              <UserPlus className="h-4 w-4 mr-2" />
                               Invite Reviewers
                             </button>
                           </div>
@@ -1122,7 +1157,15 @@ const TaskDetailPage: React.FC = () => {
                               open={showCreateMemberForm}
                               setOpen={setShowCreateMemberForm}
                               taskId={taskId}
-                              onCancel={() => setShowCreateMemberForm(false)}
+                              onCancel={() => {
+                                setShowCreateMemberForm(false),
+                                  console.log(
+                                    `selectedProjectMembers_${taskId}`,
+                                  ),
+                                  localStorage.removeItem(
+                                    `selectedProjectMembers_${taskId}`,
+                                  );
+                              }}
                               memberType={memebrType}
                             />
                           ) : null}
@@ -1134,9 +1177,12 @@ const TaskDetailPage: React.FC = () => {
                                   open={showCreateContributorsForm}
                                   setOpen={setShowCreateContributorsForm}
                                   taskId={taskId}
-                                  onCancel={() =>
-                                    setShowCreateContributorsForm(false)
-                                  }
+                                  onCancel={() => {
+                                    setShowCreateContributorsForm(false);
+                                    localStorage.removeItem(
+                                      `selectedUsers_${taskId}`,
+                                    );
+                                  }}
                                   memberType={memebrType}
                                 />
                               ) : null}
@@ -1152,10 +1198,6 @@ const TaskDetailPage: React.FC = () => {
                                     <h3 className="text-sm font-medium text-gray-900">
                                       Contributor
                                     </h3>
-                                    <p className="text-xs text-gray-500">
-                                      Click to invite a contributor to
-                                      collaborate on the task
-                                    </p>
                                   </div>
                                 </div>
                                 <button
@@ -1165,7 +1207,7 @@ const TaskDetailPage: React.FC = () => {
                                   }}
                                   className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
                                 >
-                                  <Users className="h-4 w-4 mr-2" />
+                                  <UserPlus className="h-4 w-4 mr-2" />
                                   Invite Contributor
                                 </button>
                               </div>
@@ -1183,9 +1225,6 @@ const TaskDetailPage: React.FC = () => {
                                 <h3 className="text-sm font-medium text-gray-900">
                                   Facilitator
                                 </h3>
-                                <p className="text-xs text-gray-500">
-                                  Invite a facilitator to facilitate the task
-                                </p>
                               </div>
                             </div>
                             <button
@@ -1197,8 +1236,34 @@ const TaskDetailPage: React.FC = () => {
                               }}
                               className="w-full flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
                             >
-                              <Users className="h-4 w-4 mr-2" />
+                              <UserPlus className="h-4 w-4 mr-2" />
                               Invite Facilitator
+                            </button>
+                          </div>
+                          <div className="border border-gray-100 rounded-lg p-4 bg-white ">
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-8 h-8 bg-purple-200 flex items-center justify-center rounded-full">
+                                <span className="text-[#9747FF] font-medium text-sm">
+                                  Qa
+                                </span>
+                              </div>
+                              <div>
+                                <h3 className="text-sm font-medium text-gray-900">
+                                  Quality Assurance
+                                </h3>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setMemebrType("QualityAssurance");
+                                setTimeout(() => {
+                                  setShowCreateMemberForm(true);
+                                }, 20);
+                              }}
+                              className="w-full flex items-center justify-center px-4 py-2 bg-[#9747FF] text-white rounded-md text-sm font-medium hover:bg-purple-700"
+                            >
+                              <UserPlus className="h-4 w-4 mr-2" />
+                              Invite QA
                             </button>
                           </div>
                         </div>
@@ -1280,6 +1345,7 @@ const TaskDetailPage: React.FC = () => {
                           <input
                             type="date"
                             value={expiryDate}
+                            min={today}
                             onChange={(e) => setExpiryDate(e.target.value)}
                             className="w-full p-2 border border-gray-100 rounded focus:outline-none focus:border-primary"
                           />
@@ -1366,8 +1432,12 @@ const TaskDetailPage: React.FC = () => {
                               <TableHead className="text-sm font-bold text-gray-500">
                                 Link
                               </TableHead>
+
                               <TableHead className="text-sm font-bold text-gray-500">
-                                Date Created
+                                Expiry date
+                              </TableHead>
+                              <TableHead className="text-sm font-bold text-gray-500">
+                                Max invitations
                               </TableHead>
                               <TableHead className="text-sm font-bold text-gray-500"></TableHead>
                             </TableRow>
@@ -1386,8 +1456,14 @@ const TaskDetailPage: React.FC = () => {
                                     {link.link}
                                   </TableCell>
                                   <TableCell className="py-5 px-2 text-sm">
-                                    {link.dateCreated}
+                                    {link.expiry_date
+                                      ? formatDateMedium(link.expiry_date)
+                                      : ""}
                                   </TableCell>
+                                  <TableCell className="py-5 px-2 text-sm">
+                                    {link.max_invitations}
+                                  </TableCell>
+
                                   <TableCell className="py-5 px-2 text-sm">
                                     <button
                                       onClick={() =>
@@ -1443,125 +1519,7 @@ const TaskDetailPage: React.FC = () => {
                   )}
                 </div>
               </div>
-
-              <div className="flex justify-between items-center mb-4 mt-6">
-                <div className="rounded-md px-3 py-1 text-sm"></div>
-                <div className="flex justify-between items-center w-full">
-                  <div className="border border-gray-100 rounded-md px-3 py-1 flex items-center">
-                    <Search className="h-4 w-4 text-gray-500 mr-2" />
-                    <input
-                      type="text"
-                      placeholder="Search"
-                      value={userSearchQuery}
-                      onChange={(e) => setUserSearchQuery(e.target.value)}
-                      className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
-                    />
-                  </div>
-                  {roleSearch === "Contributor" && (
-                    <>
-                      {showExport && (
-                        <>
-                          <ExportUserTask
-                            type={showExportType}
-                            taskData={taskData}
-                            onClose={() => setShowExport(false)}
-                          />
-                        </>
-                      )}
-                      <div className="flex justify-end items-center mr-10 relative">
-                        <Button
-                          onClick={() => setShowExportMenu(true)}
-                          className="bg-primary text-white flex items-center gap-2"
-                        >
-                          <svg
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                          >
-                            <path
-                              d="M12 4.5V14.5M12 4.5C11.2998 4.5 9.99153 6.4943 9.5 7M12 4.5C12.7002 4.5 14.0085 6.4943 14.5 7"
-                              stroke="white"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            ``{" "}
-                            <path
-                              d="M20 16.5C20 18.982 19.482 19.5 17 19.5H7C4.518 19.5 4 18.982 4 16.5"
-                              stroke="white"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                          Export List
-                        </Button>
-                        {showExportMenu && (
-                          <div
-                            ref={dropdownRef}
-                            className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 rounded-md shadow-lg z-50 dropdown-menu"
-                          >
-                            <button
-                              onClick={() => {
-                                setShowExportType("CSV"), setShowExport(true);
-                              }}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
-                            >
-                              Export as CSV
-                            </button>
-                            <button
-                              onClick={() => {
-                                setShowExportType("task"), setShowExport(true);
-                              }}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
-                            >
-                              Import to task
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                  {roleSearch === "Facilitator" && (
-                    <Button
-                      onClick={() => handleAutomaticAssign(taskId)}
-                      className="bg-primary text-white flex items-center gap-2"
-                    >
-                      <svg
-                        width="34"
-                        height="34"
-                        viewBox="0 0 34 34"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <g clipPath="url(#clip0_2692_18437)">
-                          <path
-                            d="M11.4097 22.6202L6.58747 18.7622C5.20728 17.6582 5.57368 15.467 7.23885 14.8731L21.2898 9.85526C23.0835 9.21426 24.8157 10.9465 24.1747 12.7402L19.1576 26.7919C18.5629 28.4563 16.3725 28.8235 15.2685 27.4433L11.4097 22.6202ZM11.4097 22.6202L16.9975 17.0324"
-                            stroke="white"
-                            strokeWidth="1.69336"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </g>
-                        <defs>
-                          <clipPath id="clip0_2692_18437">
-                            <rect
-                              width="24"
-                              height="24"
-                              fill="white"
-                              transform="translate(0.0585938 17) rotate(-45)"
-                            />
-                          </clipPath>
-                        </defs>
-                      </svg>
-                      Auto Distribute Contributors
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <div className="border-b border-gray-100 mb-4">
+              <div className="border-b border-gray-100 mb-4 mt-4">
                 <nav className="flex space-x-4">
                   <button
                     onClick={() => setRoleSearch("Facilitator")}
@@ -1595,8 +1553,205 @@ const TaskDetailPage: React.FC = () => {
                   >
                     Reviewer
                   </button>
+                  <button
+                    onClick={() => setRoleSearch("QualityAssurance")}
+                    className={`py-2 px-4 text-sm font-medium ${
+                      roleSearch === "QualityAssurance"
+                        ? "bg-primary text-white rounded-2xl px-2 py-2"
+                        : "text-gray-500 hover:text-gray-500"
+                    }`}
+                  >
+                    Quality Assurance
+                  </button>
                 </nav>
               </div>
+              <div className="flex justify-between items-center mb-4 mt-6">
+                <div className="rounded-md px-3 py-1 text-sm"></div>
+                <span className="mr-4 font-bold">{roleSearch}</span>
+                <div className="flex justify-between items-center w-full">
+                  <div className="border border-gray-100 rounded-md px-3 py-1 flex items-center">
+                    <Search className="h-4 w-4 text-gray-500 mr-2" />
+                    <input
+                      type="text"
+                      placeholder="Search"
+                      value={userSearchQuery}
+                      onChange={(e) => setUserSearchQuery(e.target.value)}
+                      className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 items-center">
+                    {/* Order By Dropdown */}
+                    {roleSearch !== "QualityAssurance" && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button className="bg-primary text-white flex items-center gap-2">
+                            Order By
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setOrderBy("score");
+                              setOrderDirection("DESC");
+                            }}
+                            className="cursor-pointer"
+                          >
+                            Score: High → Low
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setOrderBy("score");
+                              setOrderDirection("ASC");
+                            }}
+                            className="cursor-pointer"
+                          >
+                            Score: Low → High
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                    {roleSearch === "Contributor" && (
+                      <>
+                        {showExport && (
+                          <>
+                            <ExportUserTask
+                              type={showExportType}
+                              taskData={taskData}
+                              onClose={() => setShowExport(false)}
+                            />
+                          </>
+                        )}
+                        <div className="relative flex flex-row px-2">
+                          <Button
+                            onClick={() => {
+                              setShowExportType("CSV"), setShowExport(true);
+                            }}
+                            className="bg-primary mr-2  text-white flex items-center gap-2"
+                          >
+                            <svg
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M12 4.5V14.5M12 4.5C11.2998 4.5 9.99153 6.4943 9.5 7M12 4.5C12.7002 4.5 14.0085 6.4943 14.5 7"
+                                stroke="white"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              ``{" "}
+                              <path
+                                d="M20 16.5C20 18.982 19.482 19.5 17 19.5H7C4.518 19.5 4 18.982 4 16.5"
+                                stroke="white"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            Export to CSV
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setShowExportType("task"), setShowExport(true);
+                            }}
+                            className="bg-primary text-white flex items-center gap-2"
+                          >
+                            <svg
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                d="M12 4.5V14.5M12 4.5C11.2998 4.5 9.99153 6.4943 9.5 7M12 4.5C12.7002 4.5 14.0085 6.4943 14.5 7"
+                                stroke="white"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              ``{" "}
+                              <path
+                                d="M20 16.5C20 18.982 19.482 19.5 17 19.5H7C4.518 19.5 4 18.982 4 16.5"
+                                stroke="white"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                            Import to task
+                          </Button>
+                          {showExportMenu && (
+                            <div
+                              ref={dropdownRef}
+                              className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 rounded-md shadow-lg z-50 dropdown-menu"
+                            >
+                              <button
+                                onClick={() => {
+                                  setShowExportType("CSV"), setShowExport(true);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
+                              >
+                                Export as CSV
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setShowExportType("task"),
+                                    setShowExport(true);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-500 hover:bg-gray-100"
+                              >
+                                Import to task
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                    {roleSearch === "Facilitator" && (
+                      <Button
+                        onClick={() => handleAutomaticAssign(taskId)}
+                        className="bg-primary text-white flex items-center gap-2"
+                      >
+                        <svg
+                          width="34"
+                          height="34"
+                          viewBox="0 0 34 34"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <g clipPath="url(#clip0_2692_18437)">
+                            <path
+                              d="M11.4097 22.6202L6.58747 18.7622C5.20728 17.6582 5.57368 15.467 7.23885 14.8731L21.2898 9.85526C23.0835 9.21426 24.8157 10.9465 24.1747 12.7402L19.1576 26.7919C18.5629 28.4563 16.3725 28.8235 15.2685 27.4433L11.4097 22.6202ZM11.4097 22.6202L16.9975 17.0324"
+                              stroke="white"
+                              strokeWidth="1.69336"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </g>
+                          <defs>
+                            <clipPath id="clip0_2692_18437">
+                              <rect
+                                width="24"
+                                height="24"
+                                fill="white"
+                                transform="translate(0.0585938 17) rotate(-45)"
+                              />
+                            </clipPath>
+                          </defs>
+                        </svg>
+                        Auto Distribute Contributors
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="rounded-md border border-gray-100 bg-white overflow-hidden relative">
                 {isUserLoading && (
                   <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
@@ -1611,7 +1766,7 @@ const TaskDetailPage: React.FC = () => {
                         {headerGroup.headers.map((header) => (
                           <TableHead
                             key={header.id}
-                            className="text-sm font-bold text-gray-500 bg-gray-50 px-2 py-5"
+                            className="text-sm font-bold text-gray-700 bg-gray-50 px-2 py-5"
                           >
                             {header.isPlaceholder ? null : (
                               <div
@@ -1625,7 +1780,7 @@ const TaskDetailPage: React.FC = () => {
                                   )}
                                 </span>
                                 {header.column.getCanSort() && (
-                                  <span className="text-gray-500">
+                                  <span className="text-gray-700">
                                     {header.column.getIsSorted() === "asc" ? (
                                       <ArrowUp className="h-4 w-4" />
                                     ) : header.column.getIsSorted() ===
@@ -1709,7 +1864,7 @@ const TaskDetailPage: React.FC = () => {
                     : "text-gray-500 hover:text-gray-500"
                 }`}
               >
-                Contributors
+                {t("contributor")}
               </button>
               <button
                 onClick={() => {
@@ -1721,7 +1876,7 @@ const TaskDetailPage: React.FC = () => {
                     : "text-gray-500 hover:text-gray-500"
                 }`}
               >
-                Reviewers
+                {t("reviewer")}
               </button>
             </nav>
           </div>

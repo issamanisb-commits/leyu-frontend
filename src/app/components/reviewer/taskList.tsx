@@ -8,8 +8,8 @@ import { renderPaginationButtons } from "@/components/ui/paginationHelper";
 import TaskCard from "./taskCard";
 import { useRouter } from "next/navigation";
 import { ChevronLeftIcon, ChevronRightIcon, Loader2 } from "lucide-react";
-
-import { TaskCardType } from "@/app/types/project";
+import { useTranslation } from "@/lib/hooks/useTranslation";
+import { TaskCardType, TaskCardReviewer } from "@/app/types/project";
 
 interface TaskListProps {}
 interface PaginationProps {
@@ -24,10 +24,11 @@ interface PaginationProps {
 const PaginationControls: React.FC<{ pagination: PaginationProps }> = ({
   pagination,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-2">
-        <span className="md:text-sm text-xs text-gray-500">Showing</span>
+        <span className="md:text-sm text-xs text-gray-500">{t('showing')}</span>
         <select
           value={pagination.pageSize}
           onChange={(e) => {
@@ -138,7 +139,7 @@ const TaskList: React.FC<TaskListProps> = ({}) => {
             setPageSize: setTaskPageSize,
             showingText:
               taskTotalElements > 0
-                ? `Showing ${taskStartRecord} to ${taskEndRecord} out of ${taskTotalElements} records`
+                ? `${taskStartRecord} - ${taskEndRecord} / ${taskTotalElements}`
                 : "",
           }}
         />

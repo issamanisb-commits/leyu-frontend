@@ -42,10 +42,12 @@ interface WithdrawMoney {
     paymentMethod: string
     phoneNumber: string
     amount: string
+    bank_code: string
+    account_number: string
 
 }
 interface ScoreUpdate {
-   scoreValue: number
+    scoreValue: number
 }
 
 
@@ -140,7 +142,7 @@ export function ScoreResponse() {
         },
         enabled: !!session?.access_token,
         retry: (failureCount, error) => {
-          
+
             if (error.message === "No authentication token available") return false;
             return failureCount < 2;
         },
@@ -150,36 +152,36 @@ export function ScoreResponseChange() {
     const queryClient = useQueryClient();
     const res1 = useSession();
     const { data: session } = useSession();
-  return useMutation({
-    mutationFn: async (taskUpdateData: ScoreUpdate) => {
-      if (!session?.access_token) {
-        throw new Error("No authentication token available");
-      }
+    return useMutation({
+        mutationFn: async (taskUpdateData: ScoreUpdate) => {
+            if (!session?.access_token) {
+                throw new Error("No authentication token available");
+            }
 
-      const response = await axios.put<ScoreResponse>(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/score-value/update`,
-        taskUpdateData,
-        {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        }
-      );
-      return response.data;
-    },
-    onSuccess: () => {
-      toast.success("Success", {
-        description: "Task updated successfully",
-      });
-      queryClient.invalidateQueries({ queryKey: ["MyScore"] });
-    },
-    onError: (error) => {
-      if (axios.isAxiosError(error)) {
-        toast.error("Error", {
-          description: error.response?.data?.message || "Failed to update user",
-        });
-      }
-    },
-  });
-   
+            const response = await axios.put<ScoreResponse>(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/score-value/update`,
+                taskUpdateData,
+                {
+                    headers: { Authorization: `Bearer ${session.access_token}` },
+                }
+            );
+            return response.data;
+        },
+        onSuccess: () => {
+            toast.success("Success", {
+                description: "Task updated successfully",
+            });
+            queryClient.invalidateQueries({ queryKey: ["MyScore"] });
+        },
+        onError: (error) => {
+            if (axios.isAxiosError(error)) {
+                toast.error("Error", {
+                    description: error.response?.data?.message || "Failed to update user",
+                });
+            }
+        },
+    });
+
 }
 export const useWithdrawMoney = () => {
     const queryClient = useQueryClient();
@@ -207,7 +209,7 @@ export const useWithdrawMoney = () => {
             queryClient.invalidateQueries({ queryKey: ["MyBalance"], });
         },
         onError: (error) => {
-         
+
             if (axios.isAxiosError(error)) {
                 toast.error("Error", {
                     description: error.response?.data?.message || "Failed to create user",
@@ -264,48 +266,49 @@ export function useTransactionResponse({
         },
     });
 }
+export function useWithdrawOptions() {
+    const { data: session } = useSession();
+
+    return useQuery<{ data: { id: number; slug: string; swift: string; name: string; acct_length: number; country_id: number }[] }>({
+        queryKey: ["withdrawOptions"],
+        queryFn: async () => {
+            if (!session?.access_token) throw new Error("No authentication token available");
+            const response = await axios.get(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/wallet/get-withdraw-options`,
+                { headers: { Authorization: `Bearer ${session.access_token}` } }
+            );
+            return response.data;
+        },
+        enabled: !!session?.access_token,
+        retry: (failureCount, error) => {
+            if (error.message === "No authentication token available") return false;
+            return failureCount < 2;
+        },
+    });
+}
+
 export function Reviewerstatistics() {
-    const res1 = useSession();
     const { data: session } = useSession();
 
     return useQuery<statisticsResponse>({
-        queryKey: ["statisticsResponse",],
+        queryKey: ["statisticsResponse"],
         queryFn: async () => {
-
-
             try {
-                if (!session?.access_token) {
-                    throw new Error("No authentication token available");
-                }
-
-
-                const baseUrl =
-                    process.env.NEXT_PUBLIC_API_BASE_URL;
-
+                if (!session?.access_token) throw new Error("No authentication token available");
                 const response = await axios.get<statisticsResponse>(
-                    `${baseUrl}/statistics/reviewer/reviewer`,
-
-                    {
-                        headers: {
-                            Authorization: `Bearer ${session.access_token}`,
-                        },
-                    }
+                    `${process.env.NEXT_PUBLIC_API_BASE_URL}/statistics/reviewer/reviewer`,
+                    { headers: { Authorization: `Bearer ${session.access_token}` } }
                 );
-
-
-                return response.data as statisticsResponse;
+                return response.data;
             } catch (error) {
                 if (axios.isAxiosError(error)) {
-                    const message =
-                        error.response?.data?.message || "Failed to fetch Balance";
-                    toast.error("Error", { description: message });
+                    toast.error("Error", { description: error.response?.data?.message || "Failed to fetch Balance" });
                 }
                 throw error;
             }
         },
         enabled: !!session?.access_token,
         retry: (failureCount, error) => {
-
             if (error.message === "No authentication token available") return false;
             return failureCount < 2;
         },

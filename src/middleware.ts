@@ -8,6 +8,7 @@ const roleRoutes: Record<string, string[]> = {
   ProjectManager: ["/projectmanager", "/projectmanager/project", "/projectmanager/setting", "/settings"],
   Facilitator: ["/facilitator", "/facilitator/tasks", "/settings"],
   Reviewer: ["/reviewer", "/reviewer/tasks", "/settings"],
+  QualityAssurance: ["/qualityAssurance", "/qualityAssurance/tasks", "/settings"],
 };
 
 // Add "/tasks" route to allowed paths for relevant roles
@@ -27,7 +28,7 @@ export default withAuth(
     }
 
     const userRole = req.nextauth.token?.role as keyof typeof roleRoutes | null;
-
+console.log(userRole)
     // If user is not authenticated, redirect to login
     if (!userRole) {
       return NextResponse.redirect(new URL("/login", req.url));
@@ -79,8 +80,5 @@ export default withAuth(
 
 
 export const config = {
-  matcher: [
-    
-    "/((?!api|_next/static|_next/image|favicon.ico|login|linkForm|contact|.*\\..*).*)"
-  ]
+  matcher: [],
 };

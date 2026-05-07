@@ -38,6 +38,7 @@ interface CreateTaskForm {
   max_contributor_per_micro_task: number | null;
   max_expected_no_of_contributors: number | null;
   max_dataset_per_reviewer: number | null;
+  max_reviewer_per_dataset: number | null;
   max_contributor_per_facilitator: number | null;
   max_micro_task_per_contributor: number | null;
   minimum_seconds?: number | null;
@@ -68,6 +69,28 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
   onCancel,
   projectId,
 }) => {
+  // Expandable Description Component
+  const ExpandableDescription: React.FC<{ text: string; maxLength?: number }> = ({ text, maxLength = 100 }) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const shouldTruncate = text.length > maxLength;
+    
+    return (
+      <p className="text-xs text-gray-500">
+        {shouldTruncate && !isExpanded ? `${text.slice(0, maxLength)}... ` : text}
+        {shouldTruncate && (
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="font-medium ml-1"
+            style={{ color: '#095FAF' }}
+          >
+            {isExpanded ? 'Show less' : 'See more'}
+          </button>
+        )}
+      </p>
+    );
+  };
+
   const [step, setStep] = useState(1);
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,6 +108,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
     minimum_characters_length: null,
     maximum_characters_length: null,
     max_dataset_per_reviewer: null,
+    max_reviewer_per_dataset: 1,
     max_contributor_per_micro_task: null,
     max_contributor_per_facilitator: null,
     require_contributor_test: false,
@@ -291,7 +315,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
     (taskType: { id: string; name: string }) =>
       taskType.id === formData.task_type_id
   );
-  const isTextAudio = selectedTaskType?.name === "text-audio";
+  const isTextAudio = selectedTaskType?.name === "text-audio" || selectedTaskType?.name === "image-audio";
   const validateStep = (currentStep: number): boolean => {
     const newErrors: { [key: string]: string } = {};
 
@@ -314,6 +338,9 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
 
         if (!formData.max_dataset_per_reviewer || formData.max_dataset_per_reviewer <= 0) {
           newErrors.max_dataset_per_reviewer = "Must be greater than 0";
+        }
+        if (!formData.max_reviewer_per_dataset || formData.max_reviewer_per_dataset <= 0) {
+          newErrors.max_reviewer_per_dataset = "Must be greater than 0";
         }
         if (formData.max_retry_per_task === null || formData.max_retry_per_task < 0) {
           newErrors.max_retry_per_task = "Cannot be negative";
@@ -414,6 +441,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
         formData.reviewer_completion_time_limit =
           (formData.reviewer_completion_time_limit ?? 0) * 24;
         await onSubmit(formData);
+        // Only reset and close on success
         setFormData({
           name: "",
           description: "",
@@ -425,6 +453,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
           language_id: "",
           is_public: false,
           max_dataset_per_reviewer: null,
+          max_reviewer_per_dataset: 1,
           max_contributor_per_micro_task: 1,
           maximum_characters_length: null,
           minimum_characters_length: null,
@@ -450,6 +479,9 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
         });
         setErrors({});
         onCancel();
+      } catch (error) {
+        // API error - keep form open so user can fix and retry
+        console.error("Task creation failed:", error);
       } finally {
         setIsSubmitting(false);
       }
@@ -578,7 +610,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="flex items-center space-x-2">
+                <label className="flex items-center space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
                   <input
                     type="checkbox"
                     name="is_public"
@@ -587,12 +619,12 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                     className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-blue-500"
                   />
                   <span className="text-sm font-medium text-gray-700">
-                    Public (any contributor can join)
+                    Public <span className="font-normal text-gray-500">(Any Contributor Can Join)</span>
                   </span>
                 </label>
               </div>
               <div className="space-y-2">
-                <label className="flex items-center space-x-2">
+                <label className="flex items-center space-x-3 p-3 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors">
                   <input
                     name="require_contributor_test"
                     type="checkbox"
@@ -601,15 +633,16 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                     className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-blue-500"
                   />
                   <span className="text-sm font-medium text-gray-700">
-                    Require contributor test
+                    Require Contributor Test
                   </span>
                 </label>
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  maximum submission per microtask {" "}
+                  Maximum submission per microtask {" "}
                   <span className="text-red-500">*</span>
                 </label>
+                <ExpandableDescription text="Refers to the maximum number of submission that can be given for a single micro task. This limit helps control the volume of submissions per micro task, ensures fair participation among microtasks, and maintains the quality and manageability of the collected data. Once the specified limit is reached, the system will prevent additional submissions and assignments for that microtask." />
                 <input
                   name="max_contributor_per_micro_task"
                   type="number"
@@ -631,9 +664,10 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Contributors Completion Time in Days
+                  Contributors completion time in hours
                   <span className="text-red-500">*</span>
                 </label>
+                <ExpandableDescription text="Refers to the maximum amount of time, measured in hours, that contributors are given to complete and submit their work for a microtask after it has been assigned. This setting helps ensure tasks are completed within a defined timeframe and allows the system to manage task availability, deadlines, and reassignment if the task is not completed within the specified period." />
                 <input
                   name="contributor_completion_time_limit"
                   type="number"
@@ -670,9 +704,10 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Reviewer Completion time in Days
+                  Reviewer Completion time in Hours
                   <span className="text-red-500">*</span>
                 </label>
+                <ExpandableDescription text="Refers to the maximum amount of time, measured in hours, that reviewers are given to complete and submit their work for a microtask after it has been assigned. This setting helps ensure tasks are completed within a defined timeframe and allows the system to manage task availability, deadlines, and reassignment if the task is not completed within the specified period." />
                 <input
                   required
                   name="reviewer_completion_time_limit"
@@ -713,6 +748,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                   Maximum assignment per reviewer{" "}
                   <span className="text-red-500">*</span>
                 </label>
+                <ExpandableDescription text="Refers to the maximum number of submissions or microtasks that can be assigned to a reviewer at a given time. This limit helps balance the review workload among reviewers, prevents overloading a single reviewer, and ensures that submissions are reviewed efficiently and within the expected timeframe." />
                 <input
                   required
                   name="max_dataset_per_reviewer"
@@ -735,9 +771,36 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
+                  Maximum reviewer per dataset{" "}
+                  <span className="text-red-500">*</span>
+                </label>
+                <ExpandableDescription text="Refers to the maximum number of reviewers that can be assigned to review a single dataset submission. This setting helps ensure that each dataset receives the required number of independent reviews for quality assurance, validation, and accuracy before a final decision is made." />
+                <input
+                  required
+                  name="max_reviewer_per_dataset"
+                  type="number"
+                  min="1"
+                  value={formData.max_reviewer_per_dataset ?? ""}
+                  onChange={handleChange}
+                  placeholder="Enter number"
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.max_reviewer_per_dataset
+                      ? "border-red-500"
+                      : "border-gray-300"
+                  }`}
+                />
+                {errors.max_reviewer_per_dataset && (
+                  <p className="text-red-500 text-sm">
+                    {errors.max_reviewer_per_dataset}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
                   Maximum  contributors assignment per facilitator  {" "}
                   <span className="text-red-500">*</span>
                 </label>
+                <ExpandableDescription text="Refers to the maximum number of contributors that can be assigned to a facilitator for monitoring and follow-up. This limit helps ensure that facilitators can effectively supervise contributors, provide guidance when needed, and maintain the quality and progress of assigned tasks." />
                 <input
                   required
                   name="max_contributor_per_facilitator"
@@ -763,6 +826,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                   Reviewer payment  per review{" "}
                   <span className="text-red-500">*</span>
                 </label>
+                <ExpandableDescription text="Refers to the amount of compensation a reviewer receives for completing the review of a single dataset or microtask submission." />
                 <input
                   required
                   name="reviewer_payment_per_microtask"
@@ -788,6 +852,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                   Contributor payment per approved contribution{" "}
                   <span className="text-red-500">*</span>
                 </label>
+                <ExpandableDescription text="Refers to the amount of compensation a contributor receives for submitting single approved dataset." />
                 <input
                   required
                   name="contributor_payment_per_microtask"
@@ -813,6 +878,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                   Approximate time to finish task {" "}
                   <span className="text-red-500">*</span>
                 </label>
+                <ExpandableDescription text="Refers to the estimated duration, measured in minutes, that a contributor is expected to spend completing a task." />
                 <input
                   required
                   name="appriximate_time_per_batch"
@@ -837,7 +903,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                 <>
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
-                      Minimum Characters Length{" "}
+                      Minimum characters length{" "}
                       <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -847,7 +913,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                       min="0"
                       value={formData.minimum_characters_length ?? ""}
                       onChange={handleChange}
-                      placeholder="Enter seconds"
+                      placeholder="Enter number of characters "
                       className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                         errors.minimum_characters_length
                           ? "border-red-500"
@@ -872,7 +938,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                       min="0"
                       value={formData.maximum_characters_length ?? ""}
                       onChange={handleChange}
-                      placeholder="Enter seconds"
+                      placeholder="Enter number of characters "
                       className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                         errors.maximum_characters_length
                           ? "border-red-500"
@@ -891,9 +957,10 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                 <>
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
-                      Minimum Recording Length{" "}
+                      Minimum recording length{" "}
                       <span className="text-red-500">*</span>
                     </label>
+                    <ExpandableDescription text="Refers to the shortest duration in seconds that an audio dataset or submission must meet to be considered valid for a task." />
                     <input
                       required
                       name="minimum_seconds"
@@ -916,9 +983,10 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                   </div>
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
-                      Maximum Audio Seconds{" "}
+                      Maximum recording seconds{" "}
                       <span className="text-red-500">*</span>
                     </label>
+                    <ExpandableDescription text="Refers to the longest duration in seconds that an audio dataset or submission must meet to be considered valid for a task." />
                     <input
                       required
                       name="maximum_seconds"
@@ -943,8 +1011,9 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               )}
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Maximum Retry per mico Task <span className="text-red-500">*</span>
+                  Maximum retry per mico task <span className="text-red-500">*</span>
                 </label>
+                <ExpandableDescription text="Refers to the maximum number of times a contributor is allowed to resubmit or attempt a single microtask after an initial submission. This limit helps maintain task integrity, prevents excessive retries, and ensures timely progression of work." />
                 <input
                   name="max_retry_per_task"
                   type="number"
@@ -967,9 +1036,9 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Maximum Expected Total contributors{" "}
-                  <span className="text-red-500">*</span>
+                  Maximum expected total contributors
                 </label>
+                <ExpandableDescription text="Refers to the highest number of contributors anticipated or allowed to participate in a task or project. This setting helps plan resource allocation, manage task distribution, and ensure the project can handle the expected workload efficiently." />
                 <input
                   name="max_expected_no_of_contributors"
                   type="number"
@@ -1009,6 +1078,7 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
                   Maximum microtasks per contributor{" "}
                   <span className="text-red-500">*</span>
                 </label>
+                <ExpandableDescription text="Refers to the highest number of microtasks that a single contributor is allowed to work on or submit. This limit helps distribute work fairly among contributors, prevent overloading individuals, and maintain balanced progress across the project." />
                 <input
                   name="max_micro_task_per_contributor"
                   type="number"
@@ -1031,8 +1101,9 @@ const CreateTaskForm: React.FC<CreateTaskFormProps> = ({
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Batch Size <span className="text-red-500">*</span>
+                  Batch size <span className="text-red-500">*</span>
                 </label>
+                <ExpandableDescription text="Refers to the number of submissions a contributor is allowed to submit at one time. This setting helps manage workload, streamline the submission process, and ensure that contributors submit work in manageable groups rather than individually." />
                 <input
                   name="batch"
                   type="number"

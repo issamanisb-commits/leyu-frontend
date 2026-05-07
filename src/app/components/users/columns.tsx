@@ -5,10 +5,20 @@ import { UserData } from "@/app/types/global";
 import { Badge } from "@/app/components/ui/badge";
 import { UserDetailsModal } from "./userDetailsModal";
 import { formatDateMedium } from "@/app/types/dateUtils";
+import { useTranslation } from "@/lib/hooks/useTranslation";
+import { TranslationKey } from "@/lib/i18n";
+
+// Header component that uses translation
+function TH({ k }: { k: TranslationKey }) {
+  const { t } = useTranslation();
+  return <span>{t(k)}</span>;
+}
+
 export const individualColumns: ColumnDef<UserData>[] = [
   {
+    id: "fullName",
     accessorKey: "",
-    header: "Full   Name",
+    header: () => <TH k="fullName" />,
     cell: ({ row }) => {
       return (
         <div className="flex items-center gap-3">
@@ -23,14 +33,14 @@ export const individualColumns: ColumnDef<UserData>[] = [
 
   {
     accessorKey: "email",
-    header: "E-mail",
+    header: () => <TH k="email" />,
   },
   {
     accessorKey: "role",
-    header: "Role",
+    header: () => <TH k="roleHeader" />,
     cell: ({ row }) => {
       const roleData = row.original?.role;
-      const role = typeof roleData === 'object' ? roleData?.name : roleData;
+      const role = typeof roleData === "object" ? roleData?.name : roleData;
       const roleColors: Record<string, string> = {
         SuperAdmin: "text-red-500 ",
         Contributor: "bg-[#ECF6FF] text-[#095FAF]",
@@ -52,28 +62,37 @@ export const individualColumns: ColumnDef<UserData>[] = [
   },
   {
     accessorKey: "is_active",
-    header: "Status",
+    header: () => <TH k="statusHeader" />,
     cell: ({ row }) => {
+      const { t } = useTranslation();
       const status = row.original.is_active;
       return (
         <Badge variant={status ? "active" : "deactivated"}>
-          {status === true ? "Active" : "Deactivated"}
+          {status === true ? t('active') : t('deactivated')}
         </Badge>
       );
     },
   },
   {
     accessorKey: "created_date",
-    header: "Created Date",
+    header: () => <TH k="createdDateHeader" />,
     cell: ({ row }) => {
       const date = row.original.created_date;
-      return <span>{date ? formatDateMedium(date) : ""}</span>;
+      return <span className="px-2">{date ? formatDateMedium(date) : ""}</span>;
     },
   },
-
   {
+    accessorKey: "referral_code",
+    header: () => <TH k="referralCode" />,
+    cell: ({ row }) => {
+      const date = row.original.referral_code;
+      return <span className="px-2">{date}</span>;
+    },
+  },
+  {
+    id: "action",
     accessorKey: "",
-    header: "Action",
+    header: () => <TH k="actionHeader" />,
     cell: ({ row }) => {
       const [isOpen, setIsOpen] = useState(false);
 

@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { X, Calendar, Users, Search } from "lucide-react";
-import { GenerateInstruction } from "@/lib/hooks/useProjectManager";
+import {
+  GenerateInstruction,
+  GenerateQAInstruction,
+  GenerateReviewerInstruction,
+} from "@/lib/hooks/useProjectManager";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import {
   Dialog,
@@ -44,29 +48,55 @@ const CreateTaskInstruction: React.FC<CreateTaskInstructionProps> = ({
     video_instruction_url: "",
     audio_instruction_url: "",
     taskId: taskId,
+    user_type: "Contributor",
   });
 
   const [verificationStatus, setVerificationStatus] = useState<string>();
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
   const addInstructionMutation = GenerateInstruction();
+  const addInstructionQAMutation = GenerateQAInstruction();
+  const addInstructionReviewerMutation = GenerateReviewerInstruction();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    try {
-      addInstructionMutation.mutateAsync({
-        title: formData.title,
-        content: formData.content,
-        video_instruction_url: formData.video_instruction_url,
-        audio_instruction_url: formData.audio_instruction_url,
-        taskId: taskId,
-      });
-      onCancel()
-    } catch (error) {}
+    if (formData.user_type === "Contributor") {
+      try {
+        addInstructionMutation.mutateAsync({
+          title: formData.title,
+          content: formData.content,
+          video_instruction_url: formData.video_instruction_url,
+          audio_instruction_url: formData.audio_instruction_url,
+          taskId: taskId,
+        });
+        onCancel();
+      } catch (error) {}
+    } else if (formData.user_type === "QA") {
+      try {
+        addInstructionQAMutation.mutateAsync({
+          title: formData.title,
+          content: formData.content,
+          video_instruction_url: formData.video_instruction_url,
+          audio_instruction_url: formData.audio_instruction_url,
+          taskId: taskId,
+        });
+        onCancel();
+      } catch (error) {}
+    } else if (formData.user_type === "Reviewer") {
+      try {
+        addInstructionReviewerMutation.mutateAsync({
+          title: formData.title,
+          content: formData.content,
+          video_instruction_url: formData.video_instruction_url,
+          audio_instruction_url: formData.audio_instruction_url,
+          taskId: taskId,
+        });
+        onCancel();
+      } catch (error) {}
+    }
   };
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -122,6 +152,59 @@ const CreateTaskInstruction: React.FC<CreateTaskInstructionProps> = ({
                 onChange={handleInputChange}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            <div className="px-2 mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                User Type
+              </label>
+              <label className="ml-2">
+                <input
+                  type="radio"
+                  name="user_type"
+                  value="Contributor"
+                  className="ml-2"
+                  checked={formData.user_type === "Contributor"}
+                  onChange={(e) =>
+                    setFormData({ ...formData, user_type: e.target.value })
+                  }
+                />
+                <label className=" text-sm font-medium text-gray-700 mb-1">
+                 {" "}  Contributor
+                </label>
+              </label>
+
+              <label className="ml-2">
+                <input
+                  type="radio"
+                  name="user_type"
+                  value="Reviewer"
+                  className="ml-2"
+                  checked={formData.user_type === "Reviewer"}
+                  onChange={(e) =>
+                    setFormData({ ...formData, user_type: e.target.value })
+                  }
+                />
+                <label className=" text-sm font-medium text-gray-700 mb-1">
+                 {" "}  Reviewer
+                </label>
+              </label>
+
+              <label className="ml-2">
+                <input
+                  type="radio"
+                  name="user_type"
+                  value="QA"
+                  className="ml-2"
+                  checked={formData.user_type === "QA"}
+                  onChange={(e) =>
+                    setFormData({ ...formData, user_type: e.target.value })
+                  }
+                />
+                <label className=" mr-2 text-sm font-medium text-gray-700 mb-1">
+                  {" "}
+                  QA
+                </label>
+              </label>
             </div>
           </div>
           <div className="flex justify-end space-x-3">

@@ -8,6 +8,7 @@ import { useDebounce } from "@/lib/hooks/useDebounce";
 import { toast } from "sonner";
 import axios from "axios";
 import { countryCodes } from "@/app/types/countryCodes";
+import { getProfileImageSrc } from "@/app/utils/imageUtils";
 
 interface country {
   id: string;
@@ -231,7 +232,7 @@ export default function SettingsDetailPage() {
         <div className="bg-white p-6 rounded-lg ">
           <div className="flex items-center mb-6">
             <Image
-              src={session?.user?.profile_picture || "/default-avatar.png"}
+              src={getProfileImageSrc(session?.user?.profile_picture)}
               alt="User"
               width={80}
               height={80}

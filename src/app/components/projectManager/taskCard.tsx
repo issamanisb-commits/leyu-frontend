@@ -1,7 +1,9 @@
+"use client";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { TaskCardType } from "@/app/types/project";
 import { formatDateMedium } from "@/app/types/dateUtils";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 interface TaskCardProps {
   task: TaskCardType;
@@ -9,6 +11,7 @@ interface TaskCardProps {
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
+  const { t } = useTranslation();
   return (
     <div className="border border-gray-100 rounded-lg p-4 bg-white transition-shadow">
       <div className="flex justify-between items-start mb-2">
@@ -30,24 +33,24 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
               task.is_closed ? "text-red-600" : "text-[#037847]"
             }`}
           >
-           {task.is_closed ? "Inactive" : "Active"}
+           {task.is_closed ? t('inactive') : t('active')}
           </span>
         </div>
       </div>
       <p className="text-xs text-gray-600 mb-3 line-clamp-2">{task.name}</p>
       <div className="flex flex-wrap gap-4 text-xs text-gray-600 mb-3">
         <div className="flex flex-col items-start">
-          <span className="text-gray-500 px-2 py-1">Type:</span>
+          <span className="text-gray-500 px-2 py-1">{t('taskType')}:</span>
           <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">
             {task.taskType?.task_type}
           </span>
         </div>
         <div className="flex flex-col items-start px-2 py-2">
-          <span className="text-gray-500">Dialect:</span>
+          <span className="text-gray-500">{t('dialect')}:</span>
           <span>{task.dialect}</span>
         </div>
         <div className="flex ml-3 flex-col items-stat px-2 py-1">
-          <span className="text-gray-500">Created:</span>
+          <span className="text-gray-500">{t('createdDate')}:</span>
           <span>
             {task.created_date ? formatDateMedium(task.created_date) : ""}
           </span>
@@ -83,7 +86,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
             strokeWidth="1.25"
           />
         </svg>{" "}
-        View Details
+        {t('viewDetails')}
       </Button>
     </div>
   );

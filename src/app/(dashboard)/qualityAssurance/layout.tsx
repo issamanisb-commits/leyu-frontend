@@ -1,0 +1,17 @@
+// app/superadmin/layout.tsx
+"use client";
+
+import { SessionProvider } from "next-auth/react";
+import { ReactNode } from "react";
+
+export default function SuperAdminLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  return (
+    <>
+      {children}
+    </>
+  );
+}

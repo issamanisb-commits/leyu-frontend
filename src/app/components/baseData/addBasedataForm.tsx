@@ -18,6 +18,7 @@ export default function AddBasedataForm({
     code: "",
     continent: "",
     description: "",
+    ...(servicename === "country" && { continent: "" }),
   });
 
   // Fetch roles from API
@@ -31,6 +32,7 @@ export default function AddBasedataForm({
         name: formData.name,
         code: formData.code,
         description: formData.description,
+        ...(servicename === "country" && { continent: formData.continent }),
       });
       onClose();
     } catch (error) {
@@ -43,7 +45,7 @@ export default function AddBasedataForm({
       <div className="grid grid-cols-1 gap-4">
         <div>
           <label className="block text-gray-700 mb-2 font-bold "> Name</label>
-          
+
           <input
             type="text"
             value={formData.name}
@@ -86,9 +88,7 @@ export default function AddBasedataForm({
           Cancel
         </Button>
         <Button type="submit" disabled={addbasedataMutation.isPending}>
-          {addbasedataMutation.isPending
-            ? "Creating..."
-            : `create `}
+          {addbasedataMutation.isPending ? "Creating..." : `create `}
         </Button>
       </div>
     </form>

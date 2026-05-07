@@ -7,7 +7,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialogLeft";
 import { Button } from "@/components/ui/button";
-import { Plus, Upload, FileAudio } from "lucide-react";
+import { Plus, Upload, FileAudio, Image } from "lucide-react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { projectTaskasAll, projectTaskasRelated } from "@/lib/hooks/useProject";
@@ -27,6 +27,7 @@ interface AddMicroTaskDialogProps {
     taskId: string;
     is_test: boolean;
     audioFiles?: File[];
+    imageFiles?: File[];
   }) => void;
   onSubmitCsv: (uploadData: { file: File }) => void;
   onSubmitTask: (formData: {
@@ -41,6 +42,11 @@ interface AddMicroTaskDialogProps {
     is_test: boolean;
     instruction: string;
   }) => void;
+  onSubmitImage: (uploadData: {
+    files: File[];
+    is_test: boolean;
+    instruction: string;
+  }) => void;
   open: boolean;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
@@ -50,6 +56,8 @@ interface CsvRow {
   text: string;
   taskId: string;
   [key: string]: string;
+  category:string;
+  intent:string
 }
 
 const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
@@ -59,9 +67,11 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
   onSubmitCsv,
   onSubmitTask,
   onSubmitAudio,
+  onSubmitImage,
   open,
   setOpen,
 }) => {
+  
   const [activeTab, setActiveTab] = useState<
     "Single" | "CsvUpload" | "ImportTask"
   >("Single");
@@ -77,6 +87,8 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
   });
 
   const [audioFiles, setAudioFiles] = useState<File[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvData, setCsvData] = useState<CsvRow[]>([]);
   const [csvError, setCsvError] = useState<string | null>(null);
@@ -88,6 +100,7 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
   // File size limits
   const MAX_CSV_SIZE = 7 * 1024 * 1024; // 7 MB
   const MAX_AUDIO_SIZE = 7 * 1024 * 1024; // 70MB
+  const MAX_IMAGE_SIZE = 3 * 1024 * 1024; // 10MB
 
   const handleSwitchChange = (type: "microTask" | "dataSet") => {
     if (type === "microTask") {
@@ -100,13 +113,13 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
   };
 
   // Reusable file size validator
-  const validateFileSize = (file: File, type: "csv" | "audio"): boolean => {
-    const maxSize = type === "audio" ? MAX_AUDIO_SIZE : MAX_CSV_SIZE;
-    const maxSizeMB = type === "audio" ? 50 : 10;
+  const validateFileSize = (file: File, type: "csv" | "audio" | "image"): boolean => {
+    const maxSize = type === "audio" ? MAX_AUDIO_SIZE : type === "image" ? MAX_IMAGE_SIZE : MAX_CSV_SIZE;
+    const maxSizeMB = type === "audio" ? 50 : type === "image" ? 10 : 10;
 
     if (file.size > maxSize) {
       toast.error(
-        `${type === "csv" ? "CSV/XLSX" : "Audio"} file is too large. Maximum allowed: ${maxSizeMB}MB`
+        `${type === "csv" ? "CSV/XLSX" : type === "audio" ? "Audio" : "Image"} file is too large. Maximum allowed: ${maxSizeMB}MB`
       );
       return false;
     }
@@ -133,6 +146,7 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
           complete: (result) => {
             const data = result.data;
             const requiredColumns: string[] = ["no", "text"];
+            const allColumns:string[]=["name","text","taskId","category","intent"];
             const headers: string[] = result.meta.fields || [];
 
             const missingColumns = requiredColumns.filter(
@@ -147,7 +161,7 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
             }
 
             const validRows: CsvRow[] = data.filter((row) =>
-              requiredColumns.every((col) => row[col]?.toString().trim())
+              allColumns.every((col) => row[col]?.toString().trim())
             );
 
             if (validRows.length === 0) {
@@ -239,11 +253,15 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
 
   const handleSingleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!singleFormData.text && audioFiles.length === 0) {
-      toast.error("Please provide text or upload audio files");
+    if (!singleFormData.text && audioFiles.length === 0 && imageFiles.length === 0) {
+      toast.error("Please provide text or upload audio/image files");
       return;
     }
-    onSubmitSingle({ ...singleFormData, audioFiles: audioFiles.length > 0 ? audioFiles : undefined });
+    onSubmitSingle({ 
+      ...singleFormData, 
+      audioFiles: audioFiles.length > 0 ? audioFiles : undefined,
+      imageFiles: imageFiles.length > 0 ? imageFiles : undefined
+    });
     setSingleFormData({
       instruction: "",
       text: "",
@@ -251,6 +269,7 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
       is_test: false,
     });
     setAudioFiles([]);
+    setImageFiles([]);
     setOpen(false);
   };
 
@@ -265,6 +284,23 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
     } else {
       toast.error("Please upload a valid CSV/XLSX file with data");
     }
+  };
+
+  const handleImageSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (imageFiles.length === 0) {
+      toast.error("Please upload image files");
+      return;
+    }
+    console.log('image')
+    onSubmitImage({
+      files: imageFiles,
+      is_test: singleFormData.is_test,
+      instruction: singleFormData.instruction,
+    });
+    setImageFiles([]);
+    setSingleFormData({ ...singleFormData, instruction: "" });
+    setOpen(false);
   };
 
   const handleAudioSubmit = (e: React.FormEvent) => {
@@ -312,14 +348,18 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
 
       <DialogContent className="sm:max-w-[650px] h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <p className="mb-4 font-bold text-lg">Add Micro Task</p>
+          <p className="mb-4 font-bold text-lg">Add Micro Task </p>
         </DialogHeader>
         <DialogTitle />
 
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-6 flex-shrink-0">
           <nav className="flex space-x-6">
-            {["Single", "CsvUpload", "ImportTask"].map((tab) => (
+            {["Single", 
+              ...(taskMetadata?.taskType?.task_type !== "image-audio" && 
+                  taskMetadata?.taskType?.task_type !== "image-text" ? ["CsvUpload"] : []), 
+              "ImportTask"
+            ].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as any)}
@@ -346,6 +386,11 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
                 taskMetadata?.taskType?.task_type === "text-text" ||
                 taskMetadata?.taskType?.task_type === "text-audio" 
                   ? handleSingleSubmit
+                  : taskMetadata?.taskType?.task_type === "audio-text"
+                  ? handleAudioSubmit
+                  : taskMetadata?.taskType?.task_type === "image-audio" ||
+                    taskMetadata?.taskType?.task_type === "image-text"
+                  ? handleImageSubmit
                   : handleAudioSubmit
               }
               className="space-y-5"
@@ -372,7 +417,7 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
                     />
                   </div>
                 </>
-              ) : (
+              ) : taskMetadata?.taskType?.task_type === "audio-text" ? (
                 <div>
                   <label className="block text-gray-700 font-medium mb-2">
                     Audio File *
@@ -432,7 +477,117 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
                     Max size: 50MB per file • Max files: 5 • Formats: MP3, WAV, etc.
                   </p>
                 </div>
-              )}
+              ) : taskMetadata?.taskType?.task_type === "image-audio" ||
+                taskMetadata?.taskType?.task_type === "image-text" ? (
+                <>
+                  {/* Media Upload with Drag and Drop */}
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-2">
+                      Media
+                    </label>
+                    
+                    {/* Drag and Drop Area */}
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragging(true);
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        const files = Array.from(e.dataTransfer.files);
+                        if (files.length > 0) {
+                          const file = files[0];
+                          if (file.type.startsWith('image/')) {
+                            if (validateFileSize(file, "image")) {
+                              setImageFiles([file]);
+                            }
+                          } else {
+                            toast.error("Please upload an image file");
+                          }
+                        }
+                      }}
+                      className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+                        isDragging
+                          ? "border-primary bg-primary/5"
+                          : "border-gray-300 bg-gray-50"
+                      }`}
+                    >
+                      {imageFiles.length === 0 ? (
+                        <>
+                          <div className="flex justify-center mb-4">
+                            <Upload className="h-12 w-12 text-gray-400" />
+                          </div>
+                          <p className="text-gray-600 font-medium mb-2">
+                            Drag and Drop a file
+                          </p>
+                          <p className="text-sm text-gray-500 mb-4">
+                            Minimum 1MB and Max 10 MB each can be uploaded
+                          </p>
+                          <p className="text-sm text-gray-500 mb-4">or</p>
+                          <label className="inline-block">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const files = Array.from(e.target.files || []);
+                                if (files.length > 0) {
+                                  const file = files[0];
+                                  if (validateFileSize(file, "image")) {
+                                    setImageFiles([file]);
+                                  } else {
+                                    e.target.value = "";
+                                  }
+                                }
+                              }}
+                              className="hidden"
+                              id="image-file-input"
+                            />
+                            <span className="px-6 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-100 cursor-pointer inline-block">
+                              Browse Files
+                            </span>
+                          </label>
+                        </>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-center">
+                            <div className="relative">
+                              <img
+                                src={URL.createObjectURL(imageFiles[0])}
+                                alt="Preview"
+                                className="w-48 h-48 object-cover rounded-lg border-2 border-gray-200"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setImageFiles([]);
+                                  const fileInput = document.getElementById('image-file-input') as HTMLInputElement;
+                                  if (fileInput) fileInput.value = "";
+                                }}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-red-600 shadow-lg"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-sm font-medium text-gray-700">
+                              {imageFiles[0].name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {(imageFiles[0].size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : null}
 
               <div>
                 <label className="block text-gray-700 font-medium mb-2">
@@ -491,7 +646,9 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
           {activeTab === "CsvUpload" &&
             (taskMetadata?.taskType?.task_type === "text-text" ||
               taskMetadata?.taskType?.task_type === "text-audio" ||
-              taskMetadata?.taskType?.task_type === "audio-text") && (
+              taskMetadata?.taskType?.task_type === "audio-text" ||
+              taskMetadata?.taskType?.task_type === "image-text" ||
+              taskMetadata?.taskType?.task_type === "image-audio") && (
               <form onSubmit={handleCsvSubmit} className="space-y-5">
                 <div>
                   <label className="block text-gray-700 font-medium mb-2">
@@ -522,7 +679,7 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
                     </p>
                   )}
                   <p className="text-xs text-gray-500 mt-1">
-                    Max size: 10MB • Required columns:{" "}
+                    Max size: 2MB • Required columns:{" "}
                     <code className="bg-gray-100 px-1 rounded">no</code>,{" "}
                     <code className="bg-gray-100 px-1 rounded">text</code>
                   </p>
@@ -542,6 +699,8 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
                           <tr>
                             <th className="px-3 py-2 text-left">No</th>
                             <th className="px-3 py-2 text-left">Text</th>
+                            <th className="px-3 py-2 text-left">Category</th>
+                            <th className="px-3 py-2 text-left">Intent</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -552,6 +711,12 @@ const AddMicroTaskDialog: React.FC<AddMicroTaskDialogProps> = ({
                               </td>
                               <td className="px-3 py-2 max-w-md truncate">
                                 {row.text}
+                              </td>
+                              <td className="px-3 py-2 max-w-md truncate">
+                                {row.category}
+                              </td>
+                              <td className="px-3 py-2 max-w-md truncate">
+                                {row.intent}
                               </td>
                             </tr>
                           ))}

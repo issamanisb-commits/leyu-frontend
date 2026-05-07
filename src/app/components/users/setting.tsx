@@ -11,6 +11,7 @@ import { useChangePassword, useMeData } from "@/lib/hooks/useFetchUser";
 import { toast } from "sonner";
 import axios from "axios";
 import { Eye, EyeClosed } from "lucide-react";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 interface Country {
   id: string;
@@ -53,6 +54,7 @@ export default function SettingsDetailPage() {
   const { data: usersData } = useMeData(session?.access_token ?? "");
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   // Fetch user data from /iam/users/me endpoint
   const { data: meData, isLoading: isMeLoading } = useQuery<UserMeResponse>({
@@ -115,6 +117,7 @@ export default function SettingsDetailPage() {
       dialect: null,
       language: null,
       score: null,
+      referral_code:null,
     };
 
     if (typeof window !== "undefined") {
@@ -390,16 +393,44 @@ export default function SettingsDetailPage() {
 
   const handleSecuritySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate new password: must contain at least one uppercase letter and one number
+    const hasUppercase = /[A-Z]/.test(security.newPassword);
+    const hasNumber = /\d/.test(security.newPassword);
+    const isLongEnough = security.newPassword.length >= 8;
+    
+    if (!isLongEnough) {
+      toast.error("Password must be at least 8 characters long.");
+      return;
+    }
+    
+    if (!hasUppercase) {
+      toast.error("Password must contain at least one uppercase letter.");
+      return;
+    }
+    
+    if (!hasNumber) {
+      toast.error("Password must contain at least one number.");
+      return;
+    }
+    
     if (security.newPassword !== security.confirmPassword) {
       toast.error("New password and confirm password do not match!");
       return;
     }
+    
     try {
       await updatePasswordMutation.mutateAsync({
         current_password: security.currentPassword,
         new_password: security.newPassword,
       });
       toast.success("Password updated successfully!");
+      // Clear form after successful update
+      setSecurity({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
     } catch (error) {
       toast.error("Failed to update password.");
     }
@@ -504,7 +535,7 @@ export default function SettingsDetailPage() {
           }`}
           onClick={() => setActiveTab("profile")}
         >
-          My Profile
+          {t('myProfile')}
         </button>
         <button
           className={`pb-2 px-4 font-semibold ${
@@ -514,7 +545,7 @@ export default function SettingsDetailPage() {
           }`}
           onClick={() => setActiveTab("security")}
         >
-          Security
+          {t('security')}
         </button>
       </div>
 
@@ -547,7 +578,7 @@ export default function SettingsDetailPage() {
                 <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
                   <div className="bg-white p-6 rounded-lg w-96">
                     <h3 className="text-lg font-semibold mb-4">
-                      Preview Image
+                      {t('previewImage')}
                     </h3>
                     {previewImage && (
                       <div className="mb-4">
@@ -576,7 +607,7 @@ export default function SettingsDetailPage() {
                         onClick={handleImageUpload}
                         disabled={isUploading}
                       >
-                        {isUploading ? "Uploading..." : "Confirm"}
+                        {isUploading ? t('uploading') : t('confirm')}
                       </button>
                     </div>
                   </div>
@@ -586,16 +617,16 @@ export default function SettingsDetailPage() {
                 htmlFor="imageUpload"
                 className="mt-2 mtext-primary border border-primary rounded-full px-4 py-1 hover:bg-blue-50 cursor-pointer"
               >
-                Change Image
+                {t('changeImage')}
               </label>
             </div>
           </div>
 
           <form onSubmit={handleProfileSubmit}>
-            <h3 className="text-lg font-semibold mb-4">Account Information</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('accountInformation')}</h3>
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="block text-gray-700 mb-2">First Name</label>
+                <label className="block text-gray-700 mb-2">{t('firstName')}</label>
                 <input
                   type="text"
                   name="first_name"
@@ -606,7 +637,7 @@ export default function SettingsDetailPage() {
               </div>
               <div>
                 <label className="block text-gray-700 mb-2">
-                  Middle Name (Father Name)
+                  {t('middleName')}
                 </label>
                 <input
                   type="text"
@@ -617,7 +648,7 @@ export default function SettingsDetailPage() {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 mb-2">Last Name</label>
+                <label className="block text-gray-700 mb-2">{t('lastName')}</label>
                 <input
                   type="text"
                   name="last_name"
@@ -627,7 +658,8 @@ export default function SettingsDetailPage() {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 mb-2">Phone Number</label>
+                <label className="block text-gray-700 mb-2">{t('phoneNumber')}</label>
+                {/* Phone Number field enforces the +251 prefix and accepts valid Ethiopian digits (9 digits after code) */}
                 <div className="flex">
                   <select
                     className="p-2 border border-gray-300 mr-2 rounded-l focus:outline-none focus:border-primary"
@@ -653,17 +685,27 @@ export default function SettingsDetailPage() {
                     name="phone"
                     value={profile.phone}
                     onChange={handleProfileChange}
-                    className="w-full p-2 border border-gray-300 rounded-r focus:outline-none focus:border-primary"
-                    placeholder=""
+                    className={`w-full p-2 border rounded-r focus:outline-none focus:border-primary ${
+                      profile.phone && profile.phone.length !== 9
+                        ? "border-red-400"
+                        : profile.phone ? "border-green-400" : "border-gray-300"
+                    }`}
+                    placeholder="9 digits"
+                    maxLength={9}
                   />
                 </div>
+                {profile.phone && profile.phone.length !== 9 && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {profile.phone.length}/9 digits required
+                  </p>
+                )}
               </div>
             </div>
 
-            <h3 className="text-lg font-semibold mb-4">Address Information</h3>
+            <h3 className="text-lg font-semibold mb-4">{t('addressInformation')}</h3>
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="block text-gray-700 mb-2">Country</label>
+                <label className="block text-gray-700 mb-2">{t('country')}</label>
                 <select
                   name="country"
                   value={profile.country_id}
@@ -671,7 +713,7 @@ export default function SettingsDetailPage() {
                   className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-primary"
                   disabled={countriesLoading}
                 >
-                  <option value="">Select Country</option>
+                  <option value="">{t('selectCountry')}</option>
                   {countryResponseData?.data.map((country) => (
                     <option key={country.id} value={country.id}>
                       {country.name}
@@ -681,7 +723,7 @@ export default function SettingsDetailPage() {
               </div>
               {profile.country_id && (
                 <div>
-                  <label className="block text-gray-700 mb-2">Region</label>
+                  <label className="block text-gray-700 mb-2">{t('region')}</label>
                   <select
                     name="region"
                     value={profile.region_id}
@@ -691,7 +733,7 @@ export default function SettingsDetailPage() {
                       regionsLoading || !regionResponseData?.data.length
                     }
                   >
-                    <option value="">Select Region</option>
+                    <option value="">{t('selectRegion')}</option>
                     {regionResponseData?.data.map((region) => (
                       <option key={region.id} value={region.id}>
                         {region.name}
@@ -702,7 +744,7 @@ export default function SettingsDetailPage() {
               )}
               {profile.region_id && (
                 <div>
-                  <label className="block text-gray-700 mb-2">Zone</label>
+                  <label className="block text-gray-700 mb-2">{t('zone')}</label>
                   <select
                     name="zone"
                     value={profile.zone_id}
@@ -710,7 +752,7 @@ export default function SettingsDetailPage() {
                     className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-primary"
                     disabled={zonesLoading || !zoneResponseData?.data.length}
                   >
-                    <option value="">Select Zone</option>
+                    <option value="">{t('selectZone')}</option>
                     {zoneResponseData?.data.map((zone) => (
                       <option key={zone.id} value={zone.id}>
                         {zone.name}
@@ -720,7 +762,7 @@ export default function SettingsDetailPage() {
                 </div>
               )}
               <div>
-                <label className="block text-gray-700 mb-2">City</label>
+                <label className="block text-gray-700 mb-2">{t('cityLabel')}</label>
                 <input
                   type="text"
                   name="city"
@@ -730,7 +772,7 @@ export default function SettingsDetailPage() {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 mb-2">Sub City</label>
+                <label className="block text-gray-700 mb-2">{t('subCity')}</label>
                 <input
                   type="text"
                   name="subCity"
@@ -740,7 +782,7 @@ export default function SettingsDetailPage() {
                 />
               </div>
               <div>
-                <label className="block text-gray-700 mb-2">Woreda</label>
+                <label className="block text-gray-700 mb-2">{t('woreda')}</label>
                 <input
                   type="text"
                   name="woreda"
@@ -774,107 +816,134 @@ export default function SettingsDetailPage() {
                   })
                 }
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-700"
               >
-                Update Changes
+                {t('updateChanges')}
               </button>
             </div>
           </form>
         </div>
       ) : (
         <div className="bg-white p-6 rounded-lg ">
-          <h3 className="text-lg font-semibold mb-1">Change Password</h3>
-          <p className="text-gray-600 mb-6">
-            Ensure your account’s security by regularly updating your password.
-            Use the form below to create a strong and unique password.
-          </p>
+          <h3 className="text-lg font-semibold mb-1">{t('changePassword')}</h3>
+          <p className="text-gray-600 mb-6">{t('changePasswordDesc')}</p>
           <form onSubmit={handleSecuritySubmit}>
             <div className="space-y-4 mb-6">
+
+              {/* Current Password */}
               <div>
                 <div className="relative">
                   <label className="block font-semibold text-gray-700 mb-2">
-                    Current Password
+                    {t('currentPassword')}
                   </label>
                   <input
-                    type={showNewPassword ? "text" : "password"}
+                    type={showPassword ? "text" : "password"}
                     name="currentPassword"
                     value={security.currentPassword}
-                    onChange={(e) =>
-                      setSecurity({
-                        ...security,
-                        currentPassword: e.target.value,
-                      })
-                    }
-                    className="h-12 w-full p-2 pr-10 placeholder-white bg-white border rounded focus:outline-none focus:border-primary"
+                    onChange={(e) => setSecurity({ ...security, currentPassword: e.target.value })}
+                    className="h-12 w-full p-2 pr-10 bg-white border rounded focus:outline-none focus:border-primary"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute mt-5 inset-y-0 right-0 top-0 pr-5 flex items-center text-sm text-gray-600 hover:text-gray-800"
+                    className="absolute mt-5 inset-y-0 right-0 top-0 pr-5 flex items-center text-gray-600 hover:text-gray-800"
                   >
-                    {showNewPassword ? (
-                      <EyeClosed className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
+                    {showPassword ? <EyeClosed className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
+
+              {/* New Password with inline validation */}
               <div>
-                <label className="block text-gray-700 mb-2 font-semibold">
-                  New Password
-                </label>
-                <input
-                  type="password"
-                  name="newPassword"
-                  value={security.newPassword}
-                  onChange={(e) =>
-                    setSecurity({ ...security, newPassword: e.target.value })
-                  }
-                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-primary"
-                />
+                <div className="relative">
+                  <label className="block text-gray-700 mb-2 font-semibold">
+                    {t('newPassword')}
+                  </label>
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    name="newPassword"
+                    value={security.newPassword}
+                    onChange={(e) => setSecurity({ ...security, newPassword: e.target.value })}
+                    className={`h-12 w-full p-2 pr-10 border rounded focus:outline-none focus:border-primary ${
+                      security.newPassword && (!/[A-Z]/.test(security.newPassword) || !/\d/.test(security.newPassword) || security.newPassword.length < 8)
+                        ? "border-red-400"
+                        : security.newPassword ? "border-green-400" : "border-gray-300"
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute mt-5 inset-y-0 right-0 top-0 pr-5 flex items-center text-gray-600 hover:text-gray-800"
+                  >
+                    {showNewPassword ? <EyeClosed className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {security.newPassword && (
+                  <div className="mt-2 space-y-1 text-xs">
+                    <p className={security.newPassword.length >= 8 ? "text-green-600" : "text-red-500"}>
+                      {security.newPassword.length >= 8 ? "✓" : "✗"} At least 8 characters
+                    </p>
+                    <p className={/[A-Z]/.test(security.newPassword) ? "text-green-600" : "text-red-500"}>
+                      {/[A-Z]/.test(security.newPassword) ? "✓" : "✗"} At least one uppercase letter
+                    </p>
+                    <p className={/\d/.test(security.newPassword) ? "text-green-600" : "text-red-500"}>
+                      {/\d/.test(security.newPassword) ? "✓" : "✗"} At least one number
+                    </p>
+                  </div>
+                )}
               </div>
+
+              {/* Confirm Password with match indicator */}
               <div>
-                <label className="block text-gray-700 mb-2 font-semibold">
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={security.confirmPassword}
-                  onChange={(e) =>
-                    setSecurity({
-                      ...security,
-                      confirmPassword: e.target.value,
-                    })
-                  }
-                  className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-primary"
-                />
+                <div className="relative">
+                  <label className="block text-gray-700 mb-2 font-semibold">
+                    {t('confirmPasswordLabel')}
+                  </label>
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={security.confirmPassword}
+                    onChange={(e) => setSecurity({ ...security, confirmPassword: e.target.value })}
+                    className={`h-12 w-full p-2 pr-10 border rounded focus:outline-none focus:border-primary ${
+                      security.confirmPassword && security.confirmPassword !== security.newPassword
+                        ? "border-red-400"
+                        : security.confirmPassword ? "border-green-400" : "border-gray-300"
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute mt-5 inset-y-0 right-0 top-0 pr-5 flex items-center text-gray-600 hover:text-gray-800"
+                  >
+                    {showConfirmPassword ? <EyeClosed className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {security.confirmPassword && security.confirmPassword !== security.newPassword && (
+                  <p className="text-xs text-red-500 mt-1">✗ Passwords do not match</p>
+                )}
+                {security.confirmPassword && security.confirmPassword === security.newPassword && (
+                  <p className="text-xs text-green-600 mt-1">✓ Passwords match</p>
+                )}
               </div>
+
             </div>
             <div className="flex justify-end space-x-4">
               <button
                 type="button"
                 className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100"
-                onClick={() =>
-                  setSecurity({
-                    currentPassword: "",
-                    newPassword: "",
-                    confirmPassword: "",
-                  })
-                }
+                onClick={() => setSecurity({ currentPassword: "", newPassword: "", confirmPassword: "" })}
               >
-                Cancel
+                {t('cancel')}
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 bg-primary text-white rounded hover:bg-blue-700"
               >
-                Update Changes
+                {t('updateChanges')}
               </button>
             </div>
           </form>

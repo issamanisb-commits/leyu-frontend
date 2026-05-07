@@ -136,9 +136,14 @@ const ExportUserTask: React.FC<ExportUserTaskProps> = ({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
+          {(type === 'task' )?
+          <h2 className="text-lg font-semibold text-gray-800">
+        Import  to {type}
+          </h2>:
           <h2 className="text-lg font-semibold text-gray-800">
         Export to {type}
-          </h2>
+          </h2>}
+       
           <button
         onClick={onClose}
         className="text-gray-500 hover:text-gray-700"
@@ -209,7 +214,7 @@ const ExportUserTask: React.FC<ExportUserTaskProps> = ({
           {/* Accepted Micro Tasks */}
           <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          No of micro task
+          No of Dataset
         </label>
         <input
           type="number"

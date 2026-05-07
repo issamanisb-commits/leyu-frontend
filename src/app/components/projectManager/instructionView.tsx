@@ -3,9 +3,12 @@ import React, { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import EditTaskInstruction from "./editTaskInstruction";
+import { DeleteInstruction } from "./deleteInstruction";
+import { TaskResponseData } from "@/app/types/project";
 interface InstructionViewProps {
   onCancel: () => void;
   open: boolean;
+   task: TaskResponseData;
   setOpen: React.Dispatch<React.SetStateAction<boolean>>;
   taskInstructions: {
     id: string;
@@ -25,11 +28,12 @@ interface InstructionViewProps {
 const InstructionView: React.FC<InstructionViewProps> = ({
   onCancel,
   taskInstructions,
-
+  task,
   open,
   setOpen,
 }) => {
   const [showEditInstruction, setShowEditInstruction] = useState(false);
+  const [showDeleteInstruction, setShowDeleteInstruction] = useState(false);
   if (!taskInstructions) {
     return (
       <div className="p-4">
@@ -133,6 +137,19 @@ const InstructionView: React.FC<InstructionViewProps> = ({
           setOpen={setShowEditInstruction}
         />
       )}
+      {showDeleteInstruction && (
+        <DeleteInstruction
+          onCancel={() => {
+            setShowDeleteInstruction(false), onCancel();
+          }}
+          id={taskInstructions.id}
+          onClose={() => {
+            setShowDeleteInstruction(false), onCancel();
+          }}
+          isOpen={showDeleteInstruction}
+          task_id={task.id}
+        />
+      )}
       <div className="flex mr-10 justify-end mt-4 space-x-2 flex-row">
         <Button
           variant="outline"
@@ -171,6 +188,7 @@ const InstructionView: React.FC<InstructionViewProps> = ({
         </Button>
         <Button
           variant="outline"
+          onClick={() => setShowDeleteInstruction(true)}
           className=" text-left px-4 py-2 text-red-500 border  border-red-300 hover:bg-red-200 flex items-center"
         >
           <svg

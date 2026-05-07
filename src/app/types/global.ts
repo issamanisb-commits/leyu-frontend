@@ -14,6 +14,8 @@ export interface UserData {
   countryCode?: string;
   status: string;
   created_date: string;
+  score?: number | null;
+  referral_code?: string | null;
   role_id: string
   language: string | { id: string; name: string; code?: string; created_by?: string; updated_by?: string; created_date?: string; updated_date?: string; deletedAt?: string; }
   dialect: string | { id: string; name: string; code?: string; created_by?: string; updated_by?: string; created_date?: string; updated_date?: string; deletedAt?: string; }
@@ -31,6 +33,7 @@ export interface UserData {
     updated_date?: string;
     deletedAt?: string;
   };
+
 }
 export interface ResetPassword {
   code: string;
@@ -43,6 +46,20 @@ export interface InvitationLinkData {
   organization: string;
   link: string;
   dateCreated: string;
+}
+export interface UserTaskSpecfic {
+  email: string,
+  first_name: string,
+  gender: string,
+  id: string,
+  is_active: boolean,
+  last_name: string,
+  membership_id: string,
+  middle_name?: string,
+  phone_number: string,
+  role: string,
+  score: string,
+  status: boolean,
 }
 export interface UserTask {
   user: {
@@ -64,6 +81,11 @@ export interface UserTask {
     image?: string | null;
 
   },
+  score?: {
+    id: string,
+    user_id: string,
+    score: number
+  },
   id: string;
   middle_name: string;
   first_name: string;
@@ -81,6 +103,22 @@ export interface UserTask {
   role_id: string
   image?: string | null;
   role: string;
+
+}
+export interface TaskMembers {
+  membership_id: string;
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone_number: string;
+  gender: string;
+  is_active: boolean;
+  score: number;
+  status: string;
+  role: string;
+  referral_code?: string;
+  middle_name?:string;
 }
 export interface User {
   id: string;
@@ -92,6 +130,7 @@ export interface User {
   birth_date: string;
   password?: string;
   phoneNumber?: string;
+  phone_number?: string;
   countryCode?: string;
   status: string;
   is_active: boolean;
@@ -192,6 +231,7 @@ export interface MeResponse {
   dialect: any | null;
   language: any | null;
   score: number | null;
+  referral_code:string|null;
 }
 
 export interface UserMeResponse {

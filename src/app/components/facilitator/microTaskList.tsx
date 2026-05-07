@@ -55,6 +55,7 @@ import { TaskInstructions } from "@/app/types/project";
 import type { SortingState } from "@tanstack/react-table";
 import TaskDetailsGeneral from "@/app/components/projectManager/taskDetailsGeneral";
 import TaskDataset from "./microTaskDataset";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 interface MicroTaskListProps {
   taskId: string;
   microTaskPage: number;
@@ -78,10 +79,11 @@ interface PaginationProps {
 const PaginationControls: React.FC<{ pagination: PaginationProps }> = ({
   pagination,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-2">
-        <span className="md:text-sm text-xs text-gray-500">Showing</span>
+        <span className="md:text-sm text-xs text-gray-500">{t("showing")}</span>
         <select
           value={pagination.pageSize}
           onChange={(e) => {
@@ -112,7 +114,7 @@ const PaginationControls: React.FC<{ pagination: PaginationProps }> = ({
         </Button>
         {Array.from(
           { length: Math.max(1, pagination.pageCount) },
-          (_, i) => i + 1
+          (_, i) => i + 1,
         ).map((pageNumber) => (
           <Button
             key={pageNumber}
@@ -154,6 +156,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   const debouncedTaskSearch = useDebounce(searchQuery, 500);
   const [userPage, setUserPage] = useState(1);
   const [userSearchQuery, setUserSearchQuery] = useState("");
+  const { t } = useTranslation();
   const {
     data: usersData,
     isLoading: isUserLoading,
@@ -166,13 +169,14 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
     verificationStatus,
   });
   const [activeTab, setActiveTab] = useState<"Task Details" | "Users">(
-    "Task Details"
+    "Task Details",
   );
   const [isInstructionFullScreen, setIsInstructionFullScreen] = useState(false);
   const [userSubmissionsView, setUserSubmissionsView] = useState(false);
   const [contributor_id, setContributor_id] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserData>();
   const [selectedInstruction, setSelectedInstruction] = useState<any>(null);
+  
   const microtasks: UserData[] = Array.isArray(usersData?.data?.result)
     ? (usersData?.data?.result ?? [])
     : [];
@@ -185,7 +189,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
     : 0;
   const microTaskEndRecord = Math.min(
     microTaskPage * microTaskPageSize,
-    microTaskTotalElements
+    microTaskTotalElements,
   );
   const handleOpenInstruction = (instruction: TaskInstructions) => {
     setSelectedInstruction(instruction);
@@ -198,23 +202,27 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   const microTaskColumns: ColumnDef<UserData>[] = [
     {
       accessorKey: "first_name",
-      header: "First name",
+      header: t('firstName'),
     },
     {
       accessorKey: "middle_name",
-      header: "Middle name (Father Name)",
+      header: t('middleName'),
     },
     {
       accessorKey: "phone_number",
-      header: "Phone number",
+      header:  t('phoneNumber'),
     },
     {
       accessorKey: "email",
-      header: "Email",
+      header: t('email'),
+    },
+    {
+      accessorKey: "score",
+      header: t('score'),
     },
     {
       accessorKey: "",
-      header: "Submissions",
+      header: t('submissionsHeader'),
       cell: ({ row }) => {
         return (
           <button
@@ -228,7 +236,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
               }, 20);
             }}
           >
-            View
+            {t('view')}
           </button>
           // <Dialog>
           //   <DialogTrigger asChild>
@@ -288,7 +296,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
       ) : (
         <>
           <Button variant={"ghost"} className="mb-4">
-            <span onClick={onCancelTask}>← Tasks</span>
+            <span onClick={onCancelTask}>←  {t('tasks')}</span>
           </Button>
           <div className="border-b border-gray-100 mb-4">
             <nav className="flex space-x-4">
@@ -300,7 +308,8 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Task Details
+                {t('taskDetails')}
+             
               </button>
 
               <button
@@ -315,7 +324,8 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                     : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                Users
+                    {t('users')}
+                
               </button>
             </nav>
           </div>
@@ -330,9 +340,9 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                 <div className="flex justify-center items-center h-48"></div>
               ) : microtasks.length === 0 ? (
                 <div className="relative flex flex-col items-center justify-center py-12">
-                  <img 
-                    src="/empty.svg" 
-                    alt="No users found" 
+                  <img
+                    src="/empty.svg"
+                    alt="No users found"
                     className="w-64 h-64 opacity-50"
                   />
                 </div>
@@ -356,7 +366,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                     <span>
                                       {flexRender(
                                         header.column.columnDef.header,
-                                        header.getContext()
+                                        header.getContext(),
                                       )}
                                     </span>
                                     {header.column.getCanSort() && (
@@ -390,7 +400,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                 >
                                   {flexRender(
                                     cell.column.columnDef.cell,
-                                    cell.getContext()
+                                    cell.getContext(),
                                   )}
                                 </TableCell>
                               ))}

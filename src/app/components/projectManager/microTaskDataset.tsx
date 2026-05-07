@@ -31,6 +31,12 @@ import {
   Pause,
 } from "lucide-react";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialogLeft";
+import {
   ColumnDef,
   useReactTable,
   getCoreRowModel,
@@ -40,6 +46,11 @@ import {
 } from "@tanstack/react-table";
 import type { SortingState } from "@tanstack/react-table";
 import WaveSurfer from "wavesurfer.js";
+import { useSession } from "next-auth/react";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import axios from "axios";
+import { toast } from "sonner";
+import { useDatasetDetails } from "@/lib/hooks/useDatasetDetails";
 
 interface TaskDatasetProps {
   microTaskId: string;
@@ -110,13 +121,35 @@ const PaginationControls: React.FC<{ pagination: PaginationProps }> = ({
   );
 };
 
-/* ────────────────────── Main Component ────────────────────── */
+
 const TaskDataset: React.FC<TaskDatasetProps> = ({ microTaskId }) => {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [verificationStatus, setVerificationStatus] = useState<string>();
   const [pageSize, setPageSize] = useState(10);
   const [sorting, setSorting] = useState<SortingState>([]);
+
+  // Navigation and modal states
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [currentRowIndex, setCurrentRowIndex] = useState<number | null>(null);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [modalSubmissionId, setModalSubmissionId] = useState<string | null>(null);
+  const [isReviewStatusOpen, setIsReviewStatusOpen] = useState(false);
+  
+  // Approval/Rejection states
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState("");
+  const [selectedAnnotationName, setSelectedAnnotationName] = useState("");
+  const [approvalAnnotation, setApprovalAnnotation] = useState("");
+  const [rejectionComment, setRejectionComment] = useState("");
+  const [selectedRejectionTypeIds, setSelectedRejectionTypeIds] = useState<string[]>([]);
+  const [rejectionFlag, setRejectionFlag] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rejectionTypes, setRejectionTypes] = useState<any[]>([]);
+  const [annotations, setAnnotations] = useState<any[]>([]);
+  const [hasAttemptedReject, setHasAttemptedReject] = useState(false);
+  const [hasAttemptedApprove, setHasAttemptedApprove] = useState(false);
 
   const {
     data: TaskDatasetsData,
@@ -130,16 +163,228 @@ const TaskDataset: React.FC<TaskDatasetProps> = ({ microTaskId }) => {
     micro_task_id: microTaskId,
   });
 
-  const TaskDatasets: ReviewerDatset[] = Array.isArray(
-    TaskDatasetsData?.data?.result
-  )
+  // Declare TaskDatasets early so it can be used in useEffects
+  const TaskDatasets: ReviewerDatset[] = TaskDatasetsData?.data?.result && Array.isArray(TaskDatasetsData.data.result)
     ? TaskDatasetsData.data.result
     : [];
 
-  const total = TaskDatasetsData?.data?.total || 0;
-  const totalPages = TaskDatasetsData?.data?.totalPages || 1;
+  // Fetch detailed dataset information whenever modalSubmissionId changes
+  const { data: detailedDataset, isLoading: isDetailedDatasetLoading, refetch } = useDatasetDetails(
+    modalSubmissionId
+  );
+  
+  console.log("[microTaskDataset] Hook called - modalSubmissionId:", modalSubmissionId, "detailedDataset:", detailedDataset, "isLoading:", isDetailedDatasetLoading);
+
+  // Sync modalSubmissionId when currentRowIndex changes (for navigation)
+  useEffect(() => {
+    if (isDetailModalOpen && currentRowIndex !== null && TaskDatasets[currentRowIndex]) {
+      setModalSubmissionId(TaskDatasets[currentRowIndex].id);
+    }
+  }, [isDetailModalOpen, currentRowIndex, TaskDatasets]);
+
+  const total = (TaskDatasetsData?.data?.total as number) ?? 0;
+  const totalPages = (TaskDatasetsData?.data?.totalPages as number) ?? 1;
   const startRecord = TaskDatasets.length ? (page - 1) * pageSize + 1 : 0;
   const endRecord = Math.min(page * pageSize, total);
+
+  const { data: session } = useSession();
+  const queryClient = useQueryClient();
+
+  // Fetch rejection types
+  useEffect(() => {
+    const fetchRejectionTypes = async () => {
+      if (!session?.access_token) return;
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/setting/rejection-type`,
+          {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          },
+        );
+        setRejectionTypes(response.data.data || []);
+      } catch (error) {
+        console.error("Error fetching rejection types:", error);
+      }
+    };
+    fetchRejectionTypes();
+  }, [session?.access_token]);
+
+  // Fetch annotations
+  useEffect(() => {
+    const fetchAnnotations = async () => {
+      if (!session?.access_token) return;
+      try {
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/setting/annotation`,
+          {
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          },
+        );
+        setAnnotations(response.data.data || []);
+      } catch (error) {
+        console.error("Error fetching annotations:", error);
+      }
+    };
+    fetchAnnotations();
+  }, [session?.access_token]);
+
+  // Approval handler
+  const handleApprove = async () => {
+    setHasAttemptedApprove(true);
+    
+    console.log(selectedSubmissionId )
+     console.log( selectedAnnotationId)
+    if (!selectedSubmissionId || !selectedAnnotationId) {
+      toast.error("Please select an annotation");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await axios.put(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/reviewer-task/pm/approve/${selectedSubmissionId}`,
+        { annotation_id: selectedAnnotationId, annotation: selectedAnnotationName,annotationIds: [
+    selectedAnnotationId
+  ] },
+        {
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+        },
+      );
+
+      toast.success("Submission approved successfully");
+      setIsApproveDialogOpen(false);
+      setSelectedAnnotationId("");
+      setSelectedAnnotationName("");
+      setSelectedSubmissionId(null);
+      setHasAttemptedApprove(false);
+
+      // Refresh data
+      queryClient.invalidateQueries({
+        queryKey: ["microTaskDatasets", microTaskId],
+      });
+    } catch (error: any) {
+      toast.error("Error approving submission", {
+        description:
+          error.response?.data?.message || "An unexpected error occurred",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Rejection handler
+  const handleReject = async () => {
+    setHasAttemptedReject(true);
+    
+    if (!selectedSubmissionId || selectedRejectionTypeIds.length === 0) {
+      toast.error("Please select at least one rejection reason");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await axios.put(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/reviewer-task/pm/reject/${selectedSubmissionId}`,
+        {
+          comment: rejectionComment,
+          flag: rejectionFlag,
+          rejection_type_ids: [selectedRejectionTypeIds],
+        },
+        {
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+        },
+      );
+
+      toast.success("Submission rejected successfully");
+      setIsRejectDialogOpen(false);
+      setRejectionComment("");
+      setSelectedRejectionTypeIds([]);
+      setRejectionFlag(true);
+      setSelectedSubmissionId(null);
+      setHasAttemptedReject(false);
+
+      // Refresh data
+      queryClient.invalidateQueries({
+        queryKey: ["microTaskDatasets", microTaskId],
+      });
+    } catch (error: any) {
+      toast.error("Error rejecting submission", {
+        description:
+          error.response?.data?.message || "An unexpected error occurred",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Navigation handlers
+  const handleNextSubmission = () => {
+    if (currentRowIndex !== null && currentRowIndex < TaskDatasets.length - 1) {
+      const nextIndex = currentRowIndex + 1;
+      setCurrentRowIndex(nextIndex);
+      setModalSubmissionId(TaskDatasets[nextIndex].id);
+    } else if (
+      currentRowIndex === TaskDatasets.length - 1 &&
+      page < totalPages
+    ) {
+      setPage(page + 1);
+      setCurrentRowIndex(0);
+      setModalSubmissionId(null);
+    } else {
+      setIsDetailModalOpen(false);
+      setCurrentRowIndex(null);
+      setModalSubmissionId(null);
+    }
+  };
+
+  const handlePreviousSubmission = () => {
+    if (currentRowIndex !== null && currentRowIndex > 0) {
+      const prevIndex = currentRowIndex - 1;
+      setCurrentRowIndex(prevIndex);
+      setModalSubmissionId(TaskDatasets[prevIndex].id);
+    } else if (currentRowIndex === 0 && page > 1) {
+      setPage(page - 1);
+      setCurrentRowIndex(null);
+      setModalSubmissionId(null);
+    } else {
+      setIsDetailModalOpen(false);
+      setCurrentRowIndex(null);
+      setModalSubmissionId(null);
+    }
+  };
+
+  // Sync currentRowIndex after page change
+  useEffect(() => {
+    if (
+      TaskDatasets.length > 0 &&
+      currentRowIndex !== null &&
+      isDetailModalOpen &&
+      !isTaskDatasetLoading
+    ) {
+      if (currentRowIndex >= TaskDatasets.length) {
+        setCurrentRowIndex(TaskDatasets.length - 1);
+        setSelectedSubmissionId(
+          TaskDatasets[TaskDatasets.length - 1].data_set_review_id,
+        );
+      } else {
+        setSelectedSubmissionId(
+          TaskDatasets[currentRowIndex]?.data_set_review_id || null,
+        );
+      }
+    } else if (TaskDatasets.length === 0 && isDetailModalOpen && !isTaskDatasetLoading) {
+      setIsDetailModalOpen(false);
+      setCurrentRowIndex(null);
+      setSelectedSubmissionId(null);
+    }
+  }, [TaskDatasets, currentRowIndex, isDetailModalOpen, isTaskDatasetLoading]);
+
+  // Get current submission based on currentRowIndex
+  const getCurrentSubmission = () => {
+    if (currentRowIndex !== null && TaskDatasets[currentRowIndex]) {
+      return TaskDatasets[currentRowIndex];
+    }
+    return null;
+  };
 
   /* ────────────────────── Columns ────────────────────── */
   const columns: ColumnDef<ReviewerDatset>[] = [
@@ -416,6 +661,33 @@ const TaskDataset: React.FC<TaskDatasetProps> = ({ microTaskId }) => {
         );
       },
     },
+    {
+      accessorKey: "view",
+      header: "Action",
+      enableSorting: false,
+      cell: ({ row, table }) => (
+        <button
+          onClick={() => {
+            const allRows = table.getRowModel().rows;
+            const rowIndex = allRows.findIndex(
+              (r) =>
+                r.original.id === row.original.id,
+            );
+            console.log("[View Button] Setting modalSubmissionId to:", row.original.id);
+            setCurrentRowIndex(rowIndex);
+            setModalSubmissionId(row.original.id);
+            setTimeout(() => {
+              console.log("[View Button] Opening modal");
+              setIsDetailModalOpen(true);
+            }, 10);
+            
+          }}
+          className="px-3 py-1 text-sm rounded-2xl bg-primary text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          View
+        </button>
+      ),
+    },
   ];
 
   const table = useReactTable({
@@ -551,6 +823,468 @@ const TaskDataset: React.FC<TaskDatasetProps> = ({ microTaskId }) => {
           </div>
         </div>
       )}
+
+      {/* Submission Detail Dialog */}
+      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+        {(() => {
+          const currentSubmission = getCurrentSubmission();
+          if (!currentSubmission) return null;
+
+          return (
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <DialogTitle className="text-xl">
+                    Submission Details
+                  </DialogTitle>
+                  {/* Status Badge */}
+                  <span
+                    className={`px-3 py-2 rounded-2xl font-semibold ${
+                      currentSubmission.status === "Pending"
+                        ? "bg-orange-100 text-orange-400"
+                        : currentSubmission.status === "Rejected"
+                          ? "text-white bg-[#D03710]"
+                          : currentSubmission.status === "Approved"
+                            ? "bg-green-100 text-green-600"
+                            : "bg-gray-100 text-gray-600"
+                    }`}
+                  >
+                    {currentSubmission.status || "Unknown"}
+                  </span>
+                </div>
+              </DialogHeader>
+
+              <div className="flex gap-3 mt-3 text-xs">
+                <Button
+                  className="text-white border-red-600 rounded-2xl bg-red-600 hover:bg-red-50"
+                  onClick={() => {
+                    setSelectedSubmissionId(currentSubmission.id);
+                    setHasAttemptedReject(false);
+                    setIsRejectDialogOpen(true);
+                  }}
+                >
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 11 11"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="mr-2"
+                  >
+                    <path
+                      d="M10.0063 0.981445L1.05664 9.93111M1.05664 0.981445L10.0063 9.93111"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Reject
+                </Button>
+                <Button
+                  className="bg-[#54CB36] hover:bg-lime-600 rounded-2xl text-white"
+                  onClick={() => {
+                    setSelectedSubmissionId(currentSubmission.id);
+                    setHasAttemptedApprove(false);
+                    setIsApproveDialogOpen(true);
+                  }}
+                >
+                  <svg
+                    width="13"
+                    height="11"
+                    viewBox="0 0 13 11"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="mr-2"
+                  >
+                    <path
+                      d="M1.72266 6.91762L4.05599 9.25095L11.7227 1.58428"
+                      stroke="white"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Approve
+                </Button>
+              </div>
+
+              <div className="mt-6 space-y-6">
+                {/* Question Section - Micro Task */}
+                <div className="rounded-2xl p-2">
+                  <h3 className="font-semibold text-primary mb-3">Question</h3>
+                  {currentSubmission.microTask?.type === "image" &&
+                  currentSubmission.microTask?.file_path ? (
+                    <img
+                      src={currentSubmission.microTask.file_path}
+                      alt="Question"
+                      className="w-full h-64 object-cover rounded-lg border border-gray-200"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "/imageNotAvailable.png";
+                      }}
+                    />
+                  ) : currentSubmission.microTask?.type === "audio" &&
+                    currentSubmission.microTask?.file_path ? (
+                    <audio controls className="w-full">
+                      <source src={currentSubmission.microTask.file_path} />
+                      Your browser does not support the audio element.
+                    </audio>
+                  ) : (
+                    <p className="text-sm text-gray-700">
+                      {currentSubmission.microTask?.text ||
+                        "No question text available"}
+                    </p>
+                  )}
+                </div>
+
+                {/* Answer Section - Submitted Data */}
+                <div className="rounded-2xl p-5">
+                  <h3 className="font-semibold text-primary mb-3">Answer</h3>
+                  {currentSubmission.type === "audio" &&
+                  currentSubmission.file_path ? (
+                    <audio controls className="w-full">
+                      <source src={currentSubmission.file_path} />
+                      Your browser does not support the audio element.
+                    </audio>
+                  ) : currentSubmission.type === "image" &&
+                    currentSubmission.file_path ? (
+                    <img
+                      src={currentSubmission.file_path}
+                      alt="Answer"
+                      className="max-w-full max-h-96 rounded-lg border border-gray-200"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src =
+                          "/imageNotAvailable.png";
+                      }}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-700">
+                      {currentSubmission.text_data_set ||
+                        "No answer text available"}
+                    </p>
+                  )}
+                </div>
+
+                {/* Review Status - Collapsible */}
+                <div className="border border-gray-200 rounded-2xl bg-white overflow-hidden">
+                  <button
+                    className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+                    onClick={() => setIsReviewStatusOpen((v) => !v)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-gray-800">Review Status</span>
+                      {!isDetailedDatasetLoading && detailedDataset && Array.isArray(detailedDataset.reviews) && (
+                        <span className="text-sm text-gray-500">
+                          {detailedDataset.reviews.length} reviewer(s)
+                          {" · "}
+                          {detailedDataset.reviews.filter((r: any) => r.review_status?.toLowerCase() === "approved").length} approved1
+                          {", "}
+                          {detailedDataset.reviews.filter((r: any) => r.review_status?.toLowerCase() === "rejected").length} rejected
+                        </span>
+                      )}
+                    </div>
+                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isReviewStatusOpen ? "rotate-180" : ""}`} />
+                  </button>
+
+                  {isReviewStatusOpen && (
+                    <div className="px-6 pb-5 border-t border-gray-100">
+                      {isDetailedDatasetLoading ? (
+                        <div className="flex justify-center items-center py-6">
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        </div>
+                      ) : detailedDataset && Array.isArray(detailedDataset.reviews) && detailedDataset.reviews.length > 0 ? (
+                        <div className="space-y-4 mt-4">
+                          {detailedDataset.reviews.map((review: any, idx: number) => (
+                            <div key={idx} className="border border-gray-100 rounded-xl p-4">
+                              <div className="flex items-center justify-between mb-2">
+                                <div>
+                                  <p className="text-sm font-medium text-gray-800">
+                                    Reviewer {idx + 1} · {review.reviewer_name || "Unknown"}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    Score: {review.score ?? "N/A"}
+                                  </p>
+                                </div>
+                                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                  review.review_status?.toLowerCase() === "approved"
+                                    ? "bg-green-100 text-green-700"
+                                    : review.review_status?.toLowerCase() === "rejected"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-gray-100 text-gray-600"
+                                }`}>
+                                  {review.review_status || "Pending"}
+                                </span>
+                              </div>
+
+                              {review.annotations && Array.isArray(review.annotations) && review.annotations.length > 0 && (
+                                <div className="mt-2 border border-green-200 rounded-lg px-3 py-2">
+                                  <p className="text-xs font-semibold text-green-700 mb-1">Annotations</p>
+                                  <p className="text-xs text-gray-700">{review.annotations.join(", ")}</p>
+                                </div>
+                              )}
+
+                              {review.rejection_reason && Array.isArray(review.rejection_reason) && review.rejection_reason.length > 0 && (
+                                <div className="mt-2 border border-red-200 rounded-lg px-3 py-2">
+                                  <p className="text-xs font-semibold text-red-700 mb-1">Rejection Reason</p>
+                                  <p className="text-xs text-red-700">{review.rejection_reason.join(", ")}</p>
+                                </div>
+                              )}
+
+                              {review.comment && (
+                                <div className="mt-2 border border-gray-200 rounded-lg px-3 py-2">
+                                  <p className="text-xs font-semibold text-gray-600 mb-1">Comment</p>
+                                  <p className="text-xs text-gray-700">{review.comment}</p>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 italic mt-4">No review information available</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Navigation Buttons */}
+                <div className="max-w-[1000px] mx-auto px-6 py-4">
+                  <div className="flex justify-end space-x-2">
+                    <div className="flex justify-between w-full">
+                      <Button
+                        onClick={handlePreviousSubmission}
+                        disabled={currentRowIndex === 0 && page === 1}
+                        className="bg-white text-gray-700 border border-gray-400 rounded-xl hover:bg-gray-200 flex items-center gap-2"
+                      >
+                        Previous
+                      </Button>
+                      <Button
+                        onClick={handleNextSubmission}
+                        disabled={
+                          currentRowIndex === TaskDatasets.length - 1 &&
+                          page === totalPages
+                        }
+                        className="bg-primary text-white hover:bg-blue-700 flex items-center gap-2"
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          );
+        })()}
+      </Dialog>
+      {/* Approval Dialog */}
+      <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Approve Submission</DialogTitle>
+          </DialogHeader>
+          <div className="p-4 space-y-4">
+            <div>
+              <label
+                htmlFor="annotation"
+                className="text-sm font-semibold block mb-2"
+              >
+                Annotation <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="annotation"
+                value={selectedAnnotationId}
+                onChange={(e) => {
+                  setSelectedAnnotationId(e.target.value);
+                  const selectedAnnotation = annotations.find(
+                    (annotation) => annotation.id === e.target.value,
+                  );
+                  setSelectedAnnotationName(
+                    selectedAnnotation?.name || "",
+                  );
+                }}
+                className="w-full border rounded-md p-2 mt-1 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              >
+                <option value="">Select an annotation</option>
+                {annotations.map(
+                  (annotation: { id: string; name: string }) => (
+                    <option key={annotation.id} value={annotation.id}>
+                      {annotation.name}
+                    </option>
+                  ),
+                )}
+              </select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsApproveDialogOpen(false);
+                  setSelectedAnnotationId("");
+                  setSelectedAnnotationName("");
+                  setSelectedSubmissionId(null);
+                }}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-[#54CB36] hover:bg-lime-600 text-white"
+                onClick={handleApprove}
+                disabled={!selectedAnnotationId || isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Approving...
+                  </>
+                ) : (
+                  "Approve"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rejection Dialog */}
+      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Reject Submission</DialogTitle>
+          </DialogHeader>
+          <div className="p-4 space-y-4">
+            <div>
+              <label className="text-sm font-semibold block mb-2">
+                Rejection Reasons <span className="text-red-500">*</span>
+              </label>
+              <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                {rejectionTypes.map((type: any) => (
+                  <label
+                    key={type.id}
+                    className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedRejectionTypeIds.includes(type.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedRejectionTypeIds([
+                            ...selectedRejectionTypeIds,
+                            type.id,
+                          ]);
+                        } else {
+                          setSelectedRejectionTypeIds(
+                            selectedRejectionTypeIds.filter(
+                              (id) => id !== type.id,
+                            ),
+                          );
+                        }
+                      }}
+                      className="w-4 h-4 text-primary focus:ring-primary"
+                    />
+                    <span className="text-sm">{type.name}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="mt-2 text-xs text-gray-600">
+                {selectedRejectionTypeIds.length > 0
+                  ? `${selectedRejectionTypeIds.length} reason${selectedRejectionTypeIds.length > 1 ? "s" : ""} selected`
+                  : "No reasons selected"}
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="rejectionComment"
+                className="text-sm font-semibold block mb-2"
+              >
+                Comment (Optional)
+              </label>
+              <textarea
+                id="rejectionComment"
+                value={rejectionComment}
+                onChange={(e) => setRejectionComment(e.target.value)}
+                className="w-full border rounded-md p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                rows={4}
+                placeholder="Enter any additional comments"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-semibold block mb-2">
+                Flag Status
+              </label>
+              <div className="inline-flex bg-gray-100 p-1 rounded-md border border-gray-200">
+                <label
+                  className={`cursor-pointer px-3 py-1 text-sm rounded-md flex items-center gap-2 transition-colors ${
+                    rejectionFlag
+                      ? "bg-white text-primary shadow-sm"
+                      : "text-gray-600"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="flagStatus"
+                    className="sr-only"
+                    checked={rejectionFlag === true}
+                    onChange={() => setRejectionFlag(true)}
+                  />
+                  <span>Flag</span>
+                </label>
+                <label
+                  className={`cursor-pointer px-3 py-1 text-sm rounded-md flex items-center gap-2 transition-colors ${
+                    !rejectionFlag
+                      ? "bg-white text-primary shadow-sm"
+                      : "text-gray-600"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="flagStatus"
+                    className="sr-only"
+                    checked={rejectionFlag === false}
+                    onChange={() => setRejectionFlag(false)}
+                  />
+                  <span>No Flag</span>
+                </label>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Select "Flag" to mark the submission as flagged
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsRejectDialogOpen(false);
+                  setRejectionComment("");
+                  setSelectedRejectionTypeIds([]);
+                  setRejectionFlag(true);
+                  setSelectedSubmissionId(null);
+                }}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleReject}
+                disabled={selectedRejectionTypeIds.length === 0 || isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Rejecting...
+                  </>
+                ) : (
+                  "Reject"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

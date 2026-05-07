@@ -1,106 +1,114 @@
+import { TranslationKey } from '@/lib/i18n';
+
 // Define user roles
-export type UserRole = "SuperAdmin" | "ProjectManager" | "User" | "Reviewer" | "Facilitator" | null;
+export type UserRole = "SuperAdmin" | "ProjectManager" | "User" | "Reviewer" | "QualityAssurance" | "Facilitator" | null;
 
 // Define menu item structure
 export interface MenuItem {
-  label: string;
+  labelKey: TranslationKey;
   href: string;
   iconName: string;
   roles: UserRole[];
-  subItems?: { label: string; href: string }[];
+  subItems?: { labelKey: TranslationKey; href: string }[];
 }
 
 
 export const menuConfig: MenuItem[] = [
   {
-    label: "Dashboard",
+    labelKey: "dashboard",
     href: "/superadmin",
     iconName: "overview",
     roles: ["SuperAdmin"],
   },
   {
-    label: "Dashboard",
+    labelKey: "dashboard",
     href: "/projectmanager",
     iconName: "overview",
     roles: ["ProjectManager",],
   },
   {
-    label: "Dashboard",
+    labelKey: "dashboard",
     href: "/dashboard",
     iconName: "overview",
     roles: ["User"],
   },
   {
-    label: "User Management",
+    labelKey: "userManagement",
     href: "/superadmin/users",
     iconName: "userManagement",
     roles: ["SuperAdmin"],
   },
   {
-    label: "Project Management",
+    labelKey: "projectManagement",
     href: "/superadmin/project",
     iconName: "projectManagement",
     roles: ["SuperAdmin"],
   },
   {
-    label: "Dashboard",
+    labelKey: "dashboard",
     href: "/reviewer",
     iconName: "overview",
     roles: ["Reviewer"],
   },
   {
-    label: "Tasks",
+    labelKey: "tasks",
     href: "/reviewer/tasks",
     iconName: "projectManagement",
     roles: ["Reviewer"],
   },
+   {
+    labelKey: "dashboard",
+    href: "/qualityAssurance/tasks",
+    iconName: "overview",
+    roles: ["QualityAssurance",],
+  },
+  {
+    labelKey: "tasks",
+    href: "/qualityAssurance/tasks",
+    iconName: "projectManagement",
+    roles: ["QualityAssurance"],
+  },
 
   {
-    label: "Tasks",
+    labelKey: "tasks",
     href: "/facilitator/",
     iconName: "overview",
     roles: ["Facilitator"],
   },
-  // {
-  //   label: "Tasks",
-  //   href: "/facilitator/tasks",
-  //   iconName: "projectManagement",
-  //   roles: ["Facilitator"],
-  // },
   {
-    label: "Base Data",
+    labelKey: "baseData",
     href: "",
     iconName: "baseData",
     roles: ["SuperAdmin"],
     subItems: [
-      { label: "Language", href: "/superadmin/basedata/language" },
-      { label: "Dialect", href: "/superadmin/basedata/dialect" },
-      { label: "Sector", href: "/superadmin/basedata/sector" },
-      { label: "Organization", href: "/superadmin/basedata/organization" },
-      { label: "Country", href: "/superadmin/basedata/country" },
-      { label: "Region", href: "/superadmin/basedata/region" },
-      { label: "Zone", href: "/superadmin/basedata/zone" },
-      { label: "Rejection Type", href: "/superadmin/basedata/rejectionType" },
-      { label: "Annotation Type", href: "/superadmin/basedata/annotationType" },
-      { label: "Annotation ", href: "/superadmin/basedata/annotation" },
-      { label: "Flag Type", href: "/superadmin/basedata/flagType" },
+      { labelKey: "language", href: "/superadmin/basedata/language" },
+      { labelKey: "dialect", href: "/superadmin/basedata/dialect" },
+      { labelKey: "sector", href: "/superadmin/basedata/sector" },
+      { labelKey: "organization", href: "/superadmin/basedata/organization" },
+      { labelKey: "country", href: "/superadmin/basedata/country" },
+      { labelKey: "region", href: "/superadmin/basedata/region" },
+      { labelKey: "zone", href: "/superadmin/basedata/zone" },
+      { labelKey: "rejectionType", href: "/superadmin/basedata/rejectionType" },
+      { labelKey: "annotationType", href: "/superadmin/basedata/annotationType" },
+      { labelKey: "annotation", href: "/superadmin/basedata/annotation" },
+      { labelKey: "flagType", href: "/superadmin/basedata/flagType" },
     ],
   },
   {
-    label: "Archive",
+    labelKey: "archive",
     href: "/superadmin/projectArchive",
     iconName: "archive",
     roles: ["SuperAdmin"],
   },
   {
-    label: "Settings",
+    labelKey: "settings",
     href: "/superadmin/setting",
     iconName: "settings",
     roles: ["SuperAdmin"],
   },
 
   {
-    label: "System Log",
+    labelKey: "systemLog",
     href: "/superadmin/log",
     iconName: "log",
     roles: ["SuperAdmin"],
@@ -108,28 +116,22 @@ export const menuConfig: MenuItem[] = [
 
 
   {
-    label: "Projects",
+    labelKey: "projects",
     href: "/projectmanager/project",
     iconName: "projectManagement",
     roles: ["ProjectManager"],
   },
   {
-    label: "Settings",
+    labelKey: "settings",
     href: "/",
     iconName: "settings",
     roles: ["ProjectManager"],
   },
 
   {
-    label: "Help & Support",
+    labelKey: "helpSupport",
     href: "/help",
     iconName: "help",
-    roles: ["SuperAdmin", "ProjectManager", "User", "Reviewer", "Facilitator"],
+    roles: ["SuperAdmin", "ProjectManager", "User", "Reviewer", "Facilitator","QualityAssurance"],
   },
-  // {
-  //   label: "Login",
-  //   href: "/login",
-  //   iconName: "help",
-  //   roles: [null],
-  // },
 ];

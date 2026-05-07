@@ -35,6 +35,7 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import { MicroTask } from "@/app/types/project";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 import type { SortingState } from "@tanstack/react-table";
 interface MicroTaskListProps {
@@ -59,10 +60,11 @@ interface PaginationProps {
 const PaginationControls: React.FC<{ pagination: PaginationProps }> = ({
   pagination,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-2">
-        <span className="md:text-sm text-xs text-gray-500">Showing</span>
+        <span className="md:text-sm text-xs text-gray-500">{t('showing')}</span>
         <select
           value={pagination.pageSize}
           onChange={(e) => {
@@ -129,6 +131,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   setVerificationStatus,
 }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const { t } = useTranslation();
   const {
     data: microtasksData,
     isLoading: isMicroTaskLoading,
@@ -142,7 +145,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   });
 
   const microtasks: MicroTask[] = Array.isArray(microtasksData?.data?.result)
-    ? microtasksData.data.result
+    ? (microtasksData?.data?.result ?? [])
     : [];
   const microTaskTotalElements = microtasksData?.data?.total || 0;
   const microTaskTotalPages = microtasksData?.data?.totalPages || 1;
@@ -269,7 +272,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
             <div className="absolute inset-0 flex items-center justify-start p-4">
               <div className="flex items-center space-x-2">
                 <span className="text-lg font-semibold text-white">
-                  Your Wallet Balance
+                  {t('yourWalletBalance')}
                 </span>
                 <span className="text-xl font-bold text-white">
                   ETB 15,901.00
@@ -279,7 +282,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                   size="sm"
                   className="ml-2 text-white border-white hover:bg-white hover:text-blue-800"
                 >
-                  Withdraw
+                  {t('withdraw')}
                 </Button>
               </div>
             </div>
@@ -309,7 +312,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
           </div>
         </div>
         <Button variant="link" className="text-primary text-sm font-medium">
-          See All Transactions <ChevronDown className="inline w-4 h-4" />
+          {t('seeAllTransactions')} <ChevronDown className="inline w-4 h-4" />
         </Button>
       </div>
       <Table>

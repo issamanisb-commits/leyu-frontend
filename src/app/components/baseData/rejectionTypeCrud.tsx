@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "./data-table";
 import AddBasedataForm from "./addBasedataFormDynamic";
 import UpdateBasedataFormDynamic from "./updateBasedataFormDynamic";
+import { BasedataAllterantiveUpdateModal } from "./basedataAllterantive";
 import { DeleteBasedata } from "./deleteBasedata";
 import { ColumnDef } from "@tanstack/react-table";
 import { useBasedata } from "@/lib/hooks/useBasedata";
@@ -62,7 +63,7 @@ export function RejectionTypeCRUD() {
     : 0;
   const companyEndRecord = Math.min(
     page * pageSize,
-    rejectionTypeTotalElements
+    rejectionTypeTotalElements,
   );
 
   const mutation = useMutation({
@@ -108,18 +109,49 @@ export function RejectionTypeCRUD() {
     },
     { accessorKey: "description", header: "Description" },
     {
+      accessorKey: "alternative_names",
+      header: "Alternative name",
+      cell: ({ row }) => {
+        const altNames = row.original.alternative_names;
+
+        if (!altNames || altNames.length === 0) {
+          return <span className="text-gray-400">—</span>;
+        }
+
+        return (
+          <div className="flex flex-wrap gap-1">
+            {altNames.map((item: any, index: number) => {
+              const name = typeof item === "string" ? item : item.name;
+              const language_key = typeof item === "string" ? item : item.key;
+
+              return (
+                <span
+                  key={index}
+                  className="bg-gray-100 px-2 py-1 rounded text-sm"
+                >
+                  {name},{language_key}
+                </span>
+              );
+            })}
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: "",
       header: "Action",
       cell: ({ row }) => {
         const [isOpen, setIsOpen] = useState(false);
         const [isOpenDeletor, setIsOpenDeletor] = useState(false);
+        const [isDialogOpenAllternaitve, setIsDialogOpenAllternaitve] =
+          useState(false);
         return (
           <>
             <button
               onClick={() => setIsOpen(true)}
               aria-label="View user details"
             >
-             <svg
+              <svg
                 width="33"
                 height="28"
                 viewBox="0 0 33 28"
@@ -170,44 +202,106 @@ export function RejectionTypeCRUD() {
                   />
                 </DialogContent>
               </Dialog>
+              <BasedataAllterantiveUpdateModal
+                isOpen={isDialogOpenAllternaitve}
+                initialData={row.original}
+                onClose={() => setIsDialogOpenAllternaitve(false)}
+                servicename="rejection-type"
+              />
+            </button>
+             <button
+              onClick={() => setIsDialogOpenAllternaitve(true)}
+              aria-label="View user details"
+              className="hover:bg-gray-100 p-1 rounded mr-1"
+            >
+              <svg
+                width="33"
+                height="28"
+                viewBox="0 0 33 28"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  x="1.1"
+                  y="1.1"
+                  width="30.8"
+                  height="25.8"
+                  rx="5.4"
+                  stroke="#EAECF0"
+                  strokeWidth="1.2"
+                />
+
+                <g transform="translate(6, 4)">
+                  <text
+                    x="10.5"
+                    y="10"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize="12"
+                    fontWeight="bold"
+                    fill="#000"
+                  >
+                    L
+                  </text>
+                </g>
+              </svg>
             </button>
             <button
               onClick={() => setIsOpenDeletor(true)}
               aria-label="View user details"
               className="hover:bg-gray-100 p-1 rounded mr-1"
             >
-        <svg width="33" height="28" viewBox="0 0 33 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect x="1.1" y="1.1" width="30.8" height="25.8" rx="5.4" stroke="#EAECF0" strokeWidth="1.2" />
-  
+              <svg
+                width="33"
+                height="28"
+                viewBox="0 0 33 28"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  x="1.1"
+                  y="1.1"
+                  width="30.8"
+                  height="25.8"
+                  rx="5.4"
+                  stroke="#EAECF0"
+                  strokeWidth="1.2"
+                />
 
-  <g transform="translate(6, 3)">
-    <path
-      d="M16.75 4.67041L16.2336 13.0247C16.1016 15.1591 16.0357 16.2263 15.5007 16.9937C15.2361 17.373 14.8956 17.6932 14.5006 17.9337C13.7017 18.4204 12.6325 18.4204 10.4939 18.4204C8.3526 18.4204 7.28192 18.4204 6.48254 17.9328C6.08733 17.6918 5.74667 17.3711 5.48223 16.9911C4.9474 16.2226 4.88287 15.1538 4.75384 13.0164L4.25 4.67041"
-      stroke="#667085"
-      strokeWidth="1.25"
-      strokeLinecap="round"
-    />
-    <path
-      d="M3 4.67008H18M13.8797 4.67008L13.3109 3.49653C12.933 2.71697 12.744 2.32718 12.4181 2.08409C12.3458 2.03017 12.2693 1.9822 12.1892 1.94067C11.8283 1.75342 11.3951 1.75342 10.5287 1.75342C9.64067 1.75342 9.19667 1.75342 8.82973 1.94852C8.74842 1.99176 8.67082 2.04167 8.59774 2.09773C8.26803 2.35067 8.08386 2.75471 7.71551 3.5628L7.21077 4.67008"
-      stroke="#667085"
-      strokeWidth="1.25"
-      strokeLinecap="round"
-    />
-    <path
-      d="M8.41699 13.8369V8.83691"
-      stroke="#667085"
-      strokeWidth="1.25"
-      strokeLinecap="round"
-    />
-    <path
-      d="M12.583 13.8369V8.83691"
-      stroke="#667085"
-      strokeWidth="1.25"
-      strokeLinecap="round"
-    />
-  </g>
-</svg>
- </button>
+                <g transform="translate(6, 3)">
+                  <path
+                    d="M16.75 4.67041L16.2336 13.0247C16.1016 15.1591 16.0357 16.2263 15.5007 16.9937C15.2361 17.373 14.8956 17.6932 14.5006 17.9337C13.7017 18.4204 12.6325 18.4204 10.4939 18.4204C8.3526 18.4204 7.28192 18.4204 6.48254 17.9328C6.08733 17.6918 5.74667 17.3711 5.48223 16.9911C4.9474 16.2226 4.88287 15.1538 4.75384 13.0164L4.25 4.67041"
+                    stroke="#667085"
+                    strokeWidth="1.25"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M3 4.67008H18M13.8797 4.67008L13.3109 3.49653C12.933 2.71697 12.744 2.32718 12.4181 2.08409C12.3458 2.03017 12.2693 1.9822 12.1892 1.94067C11.8283 1.75342 11.3951 1.75342 10.5287 1.75342C9.64067 1.75342 9.19667 1.75342 8.82973 1.94852C8.74842 1.99176 8.67082 2.04167 8.59774 2.09773C8.26803 2.35067 8.08386 2.75471 7.71551 3.5628L7.21077 4.67008"
+                    stroke="#667085"
+                    strokeWidth="1.25"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M8.41699 13.8369V8.83691"
+                    stroke="#667085"
+                    strokeWidth="1.25"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M12.583 13.8369V8.83691"
+                    stroke="#667085"
+                    strokeWidth="1.25"
+                    strokeLinecap="round"
+                  />
+                </g>
+              </svg>
+            </button>
+            <BasedataAllterantiveUpdateModal
+              isOpen={isDialogOpenAllternaitve}
+              initialData={row.original}
+              onClose={() => setIsDialogOpenAllternaitve(false)}
+              servicename="rejection-type"
+            />
             <DeleteBasedata
               isOpen={isOpenDeletor}
               onClose={() => setIsOpenDeletor(false)}
@@ -225,8 +319,8 @@ export function RejectionTypeCRUD() {
       <div className="flex justify-end items-center">
         <Button
           onClick={() => {
-        setCurrentItem(null);
-        setIsDialogOpen(true);
+            setCurrentItem(null);
+            setIsDialogOpen(true);
           }}
         >
           Add Rejection Type

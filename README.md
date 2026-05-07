@@ -1,5 +1,5 @@
 
-# LeYu Frontend
+# Leyu Frontend
 
 > A comprehensive project management and data annotation platform with role-based access control
 

@@ -35,6 +35,7 @@ import {
   flexRender,
 } from "@tanstack/react-table";
 import { MicroTask } from "@/app/types/project";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 import type { SortingState } from "@tanstack/react-table";
 interface LandingProps {
@@ -59,10 +60,11 @@ interface PaginationProps {
 const PaginationControls: React.FC<{ pagination: PaginationProps }> = ({
   pagination,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-2">
-        <span className="md:text-sm text-xs text-gray-500">Showing</span>
+        <span className="md:text-sm text-xs text-gray-500">{t('showing')}</span>
         <select
           value={pagination.pageSize}
           onChange={(e) => {
@@ -128,6 +130,7 @@ const Landing: React.FC<LandingProps> = ({
   setVerificationStatus,
 }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const { t } = useTranslation();
   //   const {
   //     data: microtasksData,
   //     isLoading: isMicroTaskLoading,
@@ -275,7 +278,7 @@ const Landing: React.FC<LandingProps> = ({
             <div className="absolute inset-0 flex items-center justify-start p-4">
               <div className="flex items-center space-x-2">
                 <span className="text-lg font-semibold text-white">
-                  Your Wallet Balance
+                  {t('yourWalletBalance')}
                 </span>
                 <span className="text-xl font-bold text-white">
                   ETB 15,901.00
@@ -315,7 +318,7 @@ const Landing: React.FC<LandingProps> = ({
           </div>
         </div>
         <Button variant="link" className="text-primary text-sm font-medium">
-          See All Transactions <ChevronDown className="inline w-4 h-4" />
+          {t('seeAllTransactions')} <ChevronDown className="inline w-4 h-4" />
         </Button>
       </div>
       {/* <Table>

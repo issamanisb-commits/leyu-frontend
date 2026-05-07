@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import Icons from "./Icons";
 import { MenuItem as MenuItemType } from "./menuConfig";
 import { useSession } from "next-auth/react";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 interface MenuItemProps {
   item: MenuItemType;
@@ -15,6 +16,7 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, isSidebarOpen }) => {
   const pathname = usePathname();
   const [isSubMenuOpen, setIsSubMenuOpen] = useState(isSidebarOpen);
   const { data: session, status } = useSession();
+  const { t } = useTranslation();
   
   // Check if authenticated (status === "authenticated") and has token
   const isAuthenticated = status === "authenticated" && !!session?.access_token;
@@ -54,7 +56,8 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, isSidebarOpen }) => {
   const active = isActive();
 
   // Always use Link component for internal navigation to maintain React state
-  const renderLink = (href: string, label: string, isMainItem = false) => {
+  const renderLink = (href: string, labelKey: string, isMainItem = false) => {
+    const label = t(labelKey as any);
     const baseClasses = isMainItem 
       ? `flex items-center flex-1 text-lg ${active ? "text-bold text-primary bg-[#095FAF]/10 rounded-2xl p-2" : "text-gray-700 hover:text-primary"}`
       : `block text-base ${pathname === href ? "text-primary bg-[#095FAF]/10 rounded-2xl p-2" : "text-gray-700 hover:text-primary"}`;
@@ -79,13 +82,13 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, isSidebarOpen }) => {
   return (
     <li>
       <div className="flex items-center justify-between py-2">
-        {renderLink(item.href, item.label, true)}
+        {renderLink(item.href, item.labelKey as string, true)}
         
         {item.subItems && isSidebarOpen && (
           <button
             onClick={toggleSubMenu}
             className="p-2 focus:outline-none"
-            aria-label={isSubMenuOpen ? "Collapse submenu" : "Expand submenu"}
+            aria-label={isSubMenuOpen ? t('collapseSubmenu') : t('expandSubmenu')}
           >
             <ChevronDown
               className={`h-6 w-6 text-gray-900 transition-transform duration-200 ${
@@ -100,7 +103,7 @@ const MenuItem: React.FC<MenuItemProps> = ({ item, isSidebarOpen }) => {
         <ul className="ml-8 mt-2 space-y-4">
           {item.subItems.map((subItem) => (
             <li key={subItem.href}>
-              {renderLink(subItem.href, subItem.label)}
+              {renderLink(subItem.href, subItem.labelKey as string)}
             </li>
           ))}
         </ul>

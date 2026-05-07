@@ -86,8 +86,10 @@ export interface ContributorStatsResponseReviewer {
   code: number;
   data: {
     totalAssignedDataSets: number;
+    totalFullyAssignedDataSets: number;
     totalReviewedDataSets: number;
     totalUnAssignedDataSets: number;
+    totalPartiallyAssignedDataSets: number;
   };
 }
 
@@ -142,7 +144,7 @@ function DataTable<TData, TValue>({
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                     </TableHead>
                   ))}
@@ -157,7 +159,7 @@ function DataTable<TData, TValue>({
                       <TableCell key={cell.id}>
                         {flexRender(
                           cell.column.columnDef.cell,
-                          cell.getContext()
+                          cell.getContext(),
                         )}
                       </TableCell>
                     ))}
@@ -170,9 +172,9 @@ function DataTable<TData, TValue>({
                     className="h-96 text-center"
                   >
                     <div className="relative flex flex-col items-center justify-center py-12">
-                      <img 
-                        src="/empty.svg" 
-                        alt="No data available" 
+                      <img
+                        src="/empty.svg"
+                        alt="No data available"
                         className="w-64 h-64 opacity-50"
                       />
                     </div>
@@ -288,7 +290,7 @@ export default function TaskStatisticsReviwer({
     verificationStatus,
   });
   const microtasks: MicroTaskStatisticReviewer[] = Array.isArray(
-    microtasksData?.data?.result
+    microtasksData?.data?.result,
   )
     ? microtasksData.data.result
     : [];
@@ -309,7 +311,7 @@ export default function TaskStatisticsReviwer({
     isLoading: boolean;
     isError: boolean;
   };
-console.log("Reviewer Stats Data:", stats);
+  console.log("Reviewer Stats Data:", stats);
   const userColumns: ColumnDef<UserData>[] = [
     { accessorKey: "fullName", header: "Full Name" },
     { accessorKey: "microtasksAssigned", header: "Assigned" },
@@ -318,38 +320,30 @@ console.log("Reviewer Stats Data:", stats);
   ];
   const microTaskColumns: ColumnDef<MicroTaskStatisticReviewer>[] = [
     {
-      accessorKey: "first_name",
-      header: "First Name",
+      id: "full_name",
+      header: "Full Name",
       enableSorting: true,
       cell: ({ row }) => (
         <div className="min-w-[150px] max-w-[300px] truncate">
-          {row.original.first_name || " "}
+          {[row.original.first_name, row.original.last_name]
+            .filter(Boolean)
+            .join(" ") || " "}
         </div>
       ),
     },
     {
-      accessorKey: "last_name",
-      header: "Last Name (Grandfather Name)",
+      accessorKey: "email",
+      header: "Email",
       enableSorting: true,
       cell: ({ row }) => (
         <div className="min-w-[150px] max-w-[300px] truncate">
-          {row.original.last_name || " "}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "phone_number",
-      header: "Phone Number",
-      enableSorting: true,
-      cell: ({ row }) => (
-        <div className="min-w-[150px] max-w-[300px] truncate">
-          {row.original.phone_number || " "}
+          {row.original.email || " "}
         </div>
       ),
     },
     {
       accessorKey: "reviewed_count",
-      header: "Reviewed Count",
+      header: "Total Reviews Completed",
       enableSorting: true,
       cell: ({ row }) => (
         <div className="min-w-[150px] max-w-[300px] truncate">
@@ -359,7 +353,7 @@ console.log("Reviewer Stats Data:", stats);
     },
     {
       accessorKey: "pending_count",
-      header: "Pending Count",
+      header: "Reviews Pending",
       enableSorting: true,
       cell: ({ row }) => (
         <div className="min-w-[150px] max-w-[300px] truncate">
@@ -427,12 +421,14 @@ console.log("Reviewer Stats Data:", stats);
                 <p className="text-xs text-gray-500 mb-4">
                   Overview of reviewer progress across all tasks
                 </p>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-4 gap-4">
                   <div className="bg-blue-50 rounded-lg p-4 text-center">
                     <span className="block text-2xl font-bold text-primary">
-                      {stats?.data?.totalAssignedDataSets ?? ""}
+                      {stats?.data?.totalFullyAssignedDataSets ?? ""}
                     </span>
-                    <span className="text-sm text-gray-600 mt-1">Assigned</span>
+                    <span className="text-sm text-gray-600 mt-1">
+                      Fully Assigned
+                    </span>
                   </div>
                   <div className="bg-green-50 rounded-lg p-4 text-center">
                     <span className="block text-2xl font-bold text-green-600">
@@ -444,11 +440,18 @@ console.log("Reviewer Stats Data:", stats);
                   </div>
                   <div className="bg-orange-50 rounded-lg p-4 text-center">
                     <span className="block text-2xl font-bold text-orange-600">
-                   
                       {stats?.data?.totalUnAssignedDataSets ?? ""}
                     </span>
                     <span className="text-sm text-gray-600 mt-1">
                       Not Assigned
+                    </span>
+                  </div>
+                  <div className="bg-orange-50 rounded-lg p-4 text-center">
+                    <span className="block text-2xl font-bold text-orange-600">
+                      {stats?.data?.totalPartiallyAssignedDataSets ?? ""}
+                    </span>
+                    <span className="text-sm text-gray-600 mt-1">
+                      Partially Assigned
                     </span>
                   </div>
                 </div>
@@ -475,7 +478,7 @@ console.log("Reviewer Stats Data:", stats);
                               <span>
                                 {flexRender(
                                   header.column.columnDef.header,
-                                  header.getContext()
+                                  header.getContext(),
                                 )}
                               </span>
                               {header.column.getCanSort() && (
@@ -507,7 +510,7 @@ console.log("Reviewer Stats Data:", stats);
                           >
                             {flexRender(
                               cell.column.columnDef.cell,
-                              cell.getContext()
+                              cell.getContext(),
                             )}
                           </TableCell>
                         ))}

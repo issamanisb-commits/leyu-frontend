@@ -1,67 +1,72 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useSession, signOut } from "next-auth/react";
-import { useAuthStore } from "@/app/context/auth-context";
+import { useRouter, usePathname } from "next/navigation";
 
 export const useSessionExpiry = () => {
   const { data: session, status } = useSession();
-  const checkSessionExpiry = useAuthStore((state) => state.checkSessionExpiry);
+  const router = useRouter();
+  const pathname = usePathname();
+  const logoutAttemptedRef = useRef(false);
 
   const handleLogout = useCallback(async () => {
+    // Prevent multiple logout attempts
+    if (logoutAttemptedRef.current) return;
+    logoutAttemptedRef.current = true;
+
+    console.log("Session expired - logging out user");
+    
     // Only access localStorage on client side
     if (typeof window !== "undefined") {
       localStorage.removeItem("userData");
       localStorage.removeItem("userRole");
     }
     
-    // Sign out with NextAuth
+    // Sign out with NextAuth - don't use redirect to avoid loops
     await signOut({ 
-      callbackUrl: "/login",
-      redirect: true 
+      redirect: false
     });
+
+    // Manually redirect after a short delay to ensure signOut completes
+    setTimeout(() => {
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+    }, 500);
   }, []);
 
   const checkExpiry = useCallback(() => {
     if (status !== "authenticated" || !session) return;
 
     try {
-      // Check if session has expired
-      if (checkSessionExpiry()) {
+      // Check if session object exists but user data is missing (indicates expired session)
+      if (!session.user || !session.user.id || !session.access_token) {
+        console.log("Session data missing - token likely expired");
         handleLogout();
         return;
       }
 
-      // Also check NextAuth session expiry if available
-      if (session.expires) {
-        const expiryTime = new Date(session.expires).getTime();
-        if (Date.now() >= expiryTime) {
-          handleLogout();
-          return;
-        }
-      }
-
-  
-      if (!session.user?.id || !session.access_token) {
-       
+      // Check custom expires_at from user object
+      if (session.user.expires_at && Date.now() >= session.user.expires_at) {
+        console.log("User token expired based on expires_at");
         handleLogout();
         return;
       }
     } catch (error) {
       console.error("Error checking session expiry:", error);
-      // Don't logout on error, just log it
     }
-  }, [status, session, checkSessionExpiry, handleLogout]);
+  }, [status, session, handleLogout]);
 
-  // Check expiry on mount and every minute
+  // Check expiry on mount and every 5 minutes
   useEffect(() => {
     if (status !== "authenticated") return;
 
     // Initial check
     checkExpiry();
 
-    // Set up interval to check every minute
-    const interval = setInterval(checkExpiry, 60000);
+    // Set up interval to check every 5 minutes
+    const interval = setInterval(checkExpiry, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [status, checkExpiry]);
@@ -80,6 +85,16 @@ export const useSessionExpiry = () => {
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
   }, [status, checkExpiry]);
+
+  // Handle unauthenticated status
+  useEffect(() => {
+    if (status === "unauthenticated" && pathname !== "/login" && !pathname.startsWith("/linkForm")) {
+      // Only redirect if we're not already on login page or public linkForm routes
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+    }
+  }, [status, pathname]);
 
   return {
     checkExpiry,

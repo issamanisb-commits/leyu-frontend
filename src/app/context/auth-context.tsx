@@ -5,7 +5,7 @@ import { useEffect } from "react";
 
 type User = NonNullable<Session["user"]>;
 
-type UserRole = "SuperAdmin" | "ProjectManager" | "Facilitator" | "Reviewer";
+type UserRole = "SuperAdmin" | "ProjectManager" | "Facilitator" | "Reviewer" | "QualityAssurance";
 interface ExtendedUser {
   id: string;
   role: UserRole;
@@ -28,6 +28,7 @@ interface AuthState {
   isAdmin: () => boolean;
   isFacilitator: () => boolean;
   isReviewer: () => boolean;
+  isQualityAssurance: () => boolean;
   checkSessionExpiry: () => boolean;
 }
 
@@ -40,6 +41,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAdmin: () => get().user?.role === "ProjectManager",
   isFacilitator: () => get().user?.role === "Facilitator",
   isReviewer: () => get().user?.role === "Reviewer",
+  isQualityAssurance: () => get().user?.role === "QualityAssurance",
   checkSessionExpiry: () => {
     const { expires_at } = get();
     if (!expires_at) return false;
@@ -50,38 +52,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 export const useSyncAuthStore = () => {
   const { data: session, status } = useSession();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const checkSessionExpiry = useAuthStore((state) => state.checkSessionExpiry);
 
   useEffect(() => {
     if (status === "authenticated" && session?.user) {
-      // Calculate expiry time (24 hours from now)
-      const expiryTime = Date.now() + (24 * 60 * 60 * 1000);
+      // Use expires_at from session if available, otherwise calculate 24 hours from now
+      const expiryTime = session.user.expires_at || (Date.now() + (24 * 60 * 60 * 1000));
       setAuth(session.user as ExtendedUser, expiryTime);
     } else if (status === "unauthenticated") {
       setAuth(null, null);
     }
   }, [session, status, setAuth]);
 
-  // Check for session expiry every minute
-  useEffect(() => {
-    if (status !== "authenticated") return;
-
-    const interval = setInterval(() => {
-      try {
-        if (checkSessionExpiry()) {
-          // Only access localStorage on client side
-          if (typeof window !== "undefined") {
-            localStorage.removeItem("userData");
-            localStorage.removeItem("userRole");
-          }
-          // Sign out
-          signOut({ callbackUrl: "/login" });
-        }
-      } catch (error) {
-        console.error("Session expiry check error:", error);
-      }
-    }, 60000); // Check every minute
-
-    return () => clearInterval(interval);
-  }, [status, checkSessionExpiry]);
+  // Don't check for expiry here - let useSessionExpiry hook handle it
+  // This prevents duplicate logout attempts
 };

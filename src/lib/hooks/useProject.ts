@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
 import { NewProject, MicroTaskStatistic, MicroTaskStatisticReviewer, ContributorMicroTaskAssignment, TaskCardType, NewTask, MicroTask, UpdateProject, Project, ProjectDetail, ProjectResponse, TaskResponse, ProjectTask, ContributorStats, UpdateTaskForm, UpdateTask } from "@/app/types/project";
-import { User, UserTask, Project_User } from "@/app/types/global";
+import { User, UserTask, Project_User, TaskMembers } from "@/app/types/global";
 import { PaginationResponse, SinglerResponse, AllResponse } from "@/app/types/global"
 import { useSession } from "next-auth/react";
 
@@ -12,6 +12,7 @@ interface NewProjectProfilesResponse extends PaginationResponse<ProjectResponse>
 interface ProjectProfilesResponseData extends PaginationResponse<ProjectDetail> { }
 interface NewProjectUserResponseData extends PaginationResponse<Project_User> { }
 interface NewProjectUserResponse extends PaginationResponse<UserTask> { }
+interface TaskMemberResponseData extends PaginationResponse<TaskMembers>{}
 interface NewMicroTaskStatisticPrResponse extends PaginationResponse<MicroTaskStatistic> { }
 interface NewMicroTaskStatisticReviewerPrResponse extends PaginationResponse<MicroTaskStatisticReviewer> { }
 interface NewMicroTaskStatisticContributoPrResponse extends PaginationResponse<ContributorMicroTaskAssignment> { }
@@ -49,6 +50,8 @@ interface NewTaskUserProps {
   token?: string;
   taskId: string;
   role?: string;
+  order_by?:string;
+  order_direction?:'ASC'|'DESC';
 }
 interface NewMicroTaskStatisticProps {
   page: number;
@@ -982,11 +985,13 @@ export function useGetTaskUserDetail({
   verificationStatus,
   token,
   taskId,
-  role
+  role,
+  order_by,
+  order_direction,
 }: NewTaskUserProps) {
   const { data: session } = useSession();
-  return useQuery<NewProjectUserResponse>({
-    queryKey: ["taskUsers", role, taskId, userPage, userPageSize, searchQuery, verificationStatus],
+  return useQuery<TaskMemberResponseData>({
+    queryKey: ["taskUsers", role, taskId, userPage,order_direction, userPageSize, searchQuery, verificationStatus,order_by,order_direction],
     queryFn: async () => {
 
 
@@ -1003,9 +1008,12 @@ export function useGetTaskUserDetail({
 
         const baseUrl =
           process.env.NEXT_PUBLIC_API_BASE_URL;
-
-        const response = await axios.get<NewProjectUserResponse>(
-          `${baseUrl}/project-mgmt/task/${taskId}/members?${params.toString()}&${role ? `role=${role}` : ""}`,
+        let url=`${baseUrl}/project-mgmt/task/${taskId}/members?${params.toString()}&${role ? `role=${role}` : ""}`
+        if(order_by && order_direction){
+          url=url+`&order_by=${order_by}&order_direction=${order_direction}`;
+        }
+        const response = await axios.get<TaskMemberResponseData>(
+          url,
 
           {
             headers: {
@@ -1015,7 +1023,7 @@ export function useGetTaskUserDetail({
         );
 
 
-        return response.data as NewProjectUserResponse;
+        return response.data as TaskMemberResponseData;
       } catch (error) {
         if (axios.isAxiosError(error)) {
           const message =

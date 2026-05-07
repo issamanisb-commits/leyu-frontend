@@ -101,6 +101,15 @@ export interface TaskInstructions {
   created_date: string;
   updated_date: string;
 }
+export interface TaskInstructionsReviwer {
+  
+  title: string;
+  content: string;
+  image_instruction_url: string | null;
+  video_instruction_url: string | null;
+  audio_instruction_url: string | null;
+
+}
 interface data_sets {
   id: string;
   code: string;
@@ -204,6 +213,34 @@ export interface TaskCardType {
   is_public: boolean;
   require_contributor_test: boolean;
   distribution_started: boolean;
+  task_type?: string;
+  task_type_id?: string;
+  pending_reviews_count?: number;
+  total_reviews_count?: number;
+  reviewer_credit_per_microtask?: string;
+  title?: string,
+  content?: string,
+  image_instruction_url?: string | null,
+  video_instruction_url?: string | null,
+  audio_instruction_url?: string | null,
+  reviewerInstruction?: {
+    id: string,
+    task_id: string,
+    title: string,
+    content: string,
+    image_instruction_url: string | null,
+    video_instruction_url: string | null,
+    audio_instruction_url: string | null,
+    created_by: string,
+    updated_by: null,
+    created_date: string | null,
+  }
+  dialects?:
+  {
+    id: string;
+    name: string;
+  }[];
+
   taskType: {
     id: string;
     task_type: string;
@@ -212,6 +249,75 @@ export interface TaskCardType {
     created_date: string;
     updated_date: string;
   }
+}
+export interface TaskCardTypeReviwer {
+  id: string;
+  description: string,
+  name: string,
+  status: "active" | "inactive" | "Active" | "Inactive";
+  date: string;
+  updated_by: null,
+  created_date: string,
+  is_closed: boolean;
+  updated_date: string
+  created_by: string,
+  dialect: string,
+  project_id: string,
+  language_id: string;
+  is_public: boolean;
+  require_contributor_test: boolean;
+  distribution_started: boolean;
+  task_type?: string;
+  task_type_id?: string;
+  pending_reviews_count?: number;
+  total_reviews_count?: number;
+  reviewer_credit_per_microtask?: string;
+  reviewerInstruction?: {
+    id: string,
+    task_id: string,
+    title: string,
+    content: string,
+    image_instruction_url: string | null,
+    video_instruction_url: string | null,
+    audio_instruction_url: string | null,
+    created_by: string,
+    updated_by: null,
+    created_date: string | null,
+  }
+  dialects?:
+  {
+    id: string;
+    name: string;
+  }[];
+
+  taskType: {
+    id: string;
+    task_type: string;
+    created_by: string;
+    updated_by: string | null;
+    created_date: string;
+    updated_date: string;
+  }
+}
+export interface TaskCardReviewer {
+  id: string;
+  description: string,
+  name: string,
+  status: "active" | "inactive" | "Active" | "Inactive";
+  date: string;
+  created_date: string;
+  updated_by: null,
+  require_contributor_test: boolean;
+  distribution_started: boolean;
+  task_type: string;
+  pending_reviews_count: string;
+  total_reviews_count: string;
+  dialects?:
+  {
+    id: string;
+    name: string;
+  }[];
+
 }
 export interface TaskDetailStatus {
   id: string;
@@ -330,8 +436,10 @@ export interface GenderStatistic {
 }
 export interface ReviewerDatset {
   id: string;
+  data_set_review_id: string;
   code: string;
   text_data_set: string;
+  review_status?: string | null;
   status: string;
   is_draft: boolean;
   is_flagged: boolean;
@@ -344,6 +452,7 @@ export interface ReviewerDatset {
   updated_by: string | null;
   file_path: string | null;
   type: string;
+  qa_status?: string;
   created_date: string;
   updated_date: string;
   micro_task_id: string;
@@ -353,6 +462,23 @@ export interface ReviewerDatset {
   dialect_id: string;
   language_id: string | null;
   microTask: {
+    id: string;
+    code: string;
+    is_test: boolean;
+    file_path: string | null;
+    text: string | null;
+    type: string | null;
+    minimum_seconds: number | null;
+    maximum_seconds: number | null;
+    has_meet_target_dataset: boolean | null;
+    created_by: string | null;
+    updated_by: string | null;
+    created_date: string;
+    updated_date: string;
+    task_id: string;
+    status: string;
+  };
+  micro_task?: {
     id: string;
     code: string;
     is_test: boolean;
@@ -394,6 +520,18 @@ export interface ReviewerDatset {
     sectors: string | null;
     score?: number | null;
   };
+  reviews?: [
+    {
+      "id": string,
+      "reviewer_id": string,
+      "score": number,
+      "reviewer_name": string,
+      "review_status": string,
+      "comment": string,
+      "rejection_reason": string[],
+      "annotations": string[]
+    },
+  ],
   rejectionReasons: RejectionReason[];
   flagReason: FlagReason[];
 
@@ -486,6 +624,42 @@ interface Data {
   language_id: string;
   language: Language;
   dialects: Dialect[];
+  taskInstruction?: {
+    id: string,
+    task_id: string,
+    title: string,
+    content: string,
+    image_instruction_url: string | null,
+    video_instruction_url: string | null,
+    audio_instruction_url: string | null,
+    created_by: string,
+    updated_by: null,
+    created_date: string | null,
+  }
+  qaInstruction?: {
+    id: string,
+    task_id: string,
+    title: string,
+    content: string,
+    image_instruction_url: string | null,
+    video_instruction_url: string | null,
+    audio_instruction_url: string | null,
+    created_by: string,
+    updated_by: null,
+    created_date: string | null,
+  }
+  reviewerInstruction?: {
+    id: string,
+    task_id: string,
+    title: string,
+    content: string,
+    image_instruction_url: string | null,
+    video_instruction_url: string | null,
+    audio_instruction_url: string | null,
+    created_by: string,
+    updated_by: null,
+    created_date: string | null,
+  }
 }
 export interface payment {
   "id": string,
@@ -527,7 +701,8 @@ export interface TaskResponseData {
     task_id: string;
     max_contributor_per_micro_task: number;
     max_dataset_per_reviewer: number;
-  max_expected_no_of_contributors: number| null;
+    max_reviewer_per_dataset: number;
+    max_expected_no_of_contributors: number | null;
     max_micro_task_per_contributor: number | null;
     max_contributor_per_facilitator: number | null;
     batch: number | null;
@@ -555,6 +730,42 @@ export interface TaskResponseData {
     reviewer_payment_per_microtask: number;
     contributor_payment_per_microtask: number;
   };
+  taskInstruction?: {
+    id: string,
+    task_id: string,
+    title: string,
+    content: string,
+    image_instruction_url: string | null,
+    video_instruction_url: string | null,
+    audio_instruction_url: string | null,
+    created_by: string,
+    updated_by: null,
+    created_date: string | null,
+  }
+  qaInstruction?: {
+    id: string,
+    task_id: string,
+    title: string,
+    content: string,
+    image_instruction_url: string | null,
+    video_instruction_url: string | null,
+    audio_instruction_url: string | null,
+    created_by: string,
+    updated_by: null,
+    created_date: string | null,
+  }
+  reviewerInstruction?: {
+    id: string,
+    task_id: string,
+    title: string,
+    content: string,
+    image_instruction_url: string | null,
+    video_instruction_url: string | null,
+    audio_instruction_url: string | null,
+    created_by: string,
+    updated_by: null,
+    created_date: string | null,
+  }
   taskType: {
     id: string;
     task_type: string;
@@ -563,7 +774,18 @@ export interface TaskResponseData {
     created_date: string;
     updated_date: string;
   }
-  taskInstructions: TaskInstructions[];
+  taskInstructions: {
+    id: string,
+    task_id: string,
+    title: string,
+    content: string,
+    image_instruction_url: string | null,
+    video_instruction_url: string | null,
+    audio_instruction_url: string | null,
+    created_by: string,
+    updated_by: null,
+    created_date: string | null,
+  };
   payment: payment | null;
 
 }
@@ -623,7 +845,7 @@ export interface UpdateProject {
 export interface Invitation {
   projectId: string,
   expiry_date: string,
-  role: "" | "Contributor" | "Facilitator" | "Reviewer",
+  role: "" | "Contributor" | "Facilitator" | "Reviewer" | "QualityAssurance",
   organization_id: string,
   max_invitations: number,
 }
@@ -631,7 +853,10 @@ export interface AssignTask {
   taskId: string,
   memberType: string,
   emails: string[],
-}export interface AssignfacilitatorContributor {
+  qa_ids?: string[]
+
+}
+export interface AssignfacilitatorContributor {
   taskId: string,
   facilitator_id: string,
   contributor_ids: string[],
@@ -648,7 +873,7 @@ export interface AssignAutomaticContributor {
 export interface InvitationTask {
   taskId: string,
   expiry_date: string,
-  role: "" | "Contributor" | "Facilitator" | "Reviewer",
+  role: "" | "Contributor" | "Facilitator" | "Reviewer" | "QualityAssurance",
   organization_id: string,
   max_invitations: number,
 }
@@ -656,8 +881,8 @@ export interface Instruction {
   taskId: string,
   title: string,
   content: string,
-  video_instruction_url: string,
-  audio_instruction_url: string
+  video_instruction_url?: string | null,
+  audio_instruction_url?: string | null
 }
 export interface InvitationResponse {
   created_by: string,
@@ -728,6 +953,7 @@ export interface MicroTaskStatisticReviewer {
   reviewer_id: string;
   first_name: string;
   last_name: string;
+  email:string;
   phone_number: string;
   reviewed_count: number;
   pending_count: number;
@@ -772,4 +998,76 @@ export interface ContributorMicroTaskAssignment {
   dead_line: string;
   created_date: string;
   contributor: Contributor;
+}
+export interface TaskTypeInfoQA {
+  id: string;
+  task_type: string;
+  created_by: string | null;
+  updated_by: string | null;
+  created_date: string;
+  updated_date: string;
+}
+
+export interface TaskRequirementQA {
+  id: string;
+  task_id: string;
+  max_contributor_per_micro_task: number;
+  max_contributor_per_facilitator: number;
+  max_dataset_per_reviewer: number;
+  max_reviewer_per_dataset: number;
+  max_micro_task_per_contributor: number;
+  minimum_seconds: number | null;
+  maximum_seconds: number | null;
+  minimum_characters_length: number;
+  maximum_characters_length: number;
+  batch: number;
+  appriximate_time_per_batch: number;
+  max_retry_per_task: number;
+  is_dialect_specific: boolean;
+  dialects: any[]; // Or string[] if you have specific dialect types
+  is_age_specific: boolean;
+  age: number | null;
+  is_sector_specific: boolean;
+  sectors: any[] | null;
+  is_gender_specific: boolean;
+  gender: string | null;
+  is_location_specific: boolean;
+  locations: any[] | null;
+  created_date: string;
+  updated_date: string;
+}
+
+export interface TaskQA {
+  id: string;
+  name: string;
+  description: string;
+  is_public: boolean;
+  require_contributor_test: boolean;
+  is_closed: boolean;
+  is_archived: boolean;
+  distribution_started: boolean;
+  contributor_completion_time_limit: number;
+  reviewer_completion_time_limit: number;
+  max_expected_no_of_contributors: number | null;
+  created_by: string;
+  updated_by: string | null;
+  created_date: string;
+  updated_date: string;
+  project_id: string;
+  task_type_id: string;
+  language_id: string;
+  taskType: TaskTypeInfoQA;
+  taskRequirement: TaskRequirementQA;
+  qaInstruction?: {
+    id: string,
+    task_id: string,
+    title: string,
+    content: string,
+    image_instruction_url: string | null,
+    video_instruction_url: string | null,
+    audio_instruction_url: string | null,
+    created_by: string,
+    updated_by: null,
+    created_date: string | null,
+  }
 }

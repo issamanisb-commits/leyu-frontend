@@ -54,14 +54,18 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
   const [formData, setFormData] = useState({
     name: projectData.name,
     description: projectData.description,
-    startDate: projectData.start_date ? projectData.start_date.split("T")[0] : "",
+    startDate: projectData.start_date
+      ? projectData.start_date.split("T")[0]
+      : "",
     endDate: projectData.end_date ? projectData.end_date.split("T")[0] : "",
     image: null as File | null,
   });
 
   const [tags, setTags] = useState<string[]>(projectData.tags || []);
   const [tagInput, setTagInput] = useState("");
-  const [imagePreview, setImagePreview] = useState<string | null>(projectData.image || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    projectData.image || null,
+  );
   const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -69,12 +73,12 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
   }, [projectData.tags]);
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
-
+  const today = new Date().toISOString().split("T")[0];
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -127,7 +131,11 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (formData.startDate && formData.endDate && formData.startDate > formData.endDate) {
+    if (
+      formData.startDate &&
+      formData.endDate &&
+      formData.startDate > formData.endDate
+    ) {
       toast.error("End date must be after start date");
       return;
     }
@@ -164,11 +172,15 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
         >
           <X className="h-5 w-5" />
         </button>
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">Update Project</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-6">
+          Update Project
+        </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Name
+            </label>
             <input
               type="text"
               name="name"
@@ -181,7 +193,9 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
             <textarea
               name="description"
               value={formData.description}
@@ -195,12 +209,15 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
           {/* Dates */}
           <div className="flex space-x-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Start Date
+              </label>
               <div className="relative">
                 <input
                   type="date"
                   name="startDate"
                   value={formData.startDate}
+                  min={today}
                   onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
                   required
@@ -209,11 +226,14 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
               </div>
             </div>
             <div className="flex- Huck 1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                End Date
+              </label>
               <div className="relative">
                 <input
                   type="date"
                   name="endDate"
+                   min={today}
                   value={formData.endDate}
                   onChange={handleInputChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
@@ -226,7 +246,9 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
 
           {/* TAGS */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Tags
+            </label>
             <div className="flex items-center border border-gray-300 rounded-md">
               <input
                 type="text"
@@ -272,7 +294,9 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
 
           {/* Image */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Project Image</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Project Image
+            </label>
             {imagePreview && (
               <div className="mb-4 relative">
                 <img
@@ -299,12 +323,21 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
                 accept="image/*"
                 multiple={false}
               />
-              <label htmlFor="image-upload" className="flex flex-col items-center cursor-pointer">
+              <label
+                htmlFor="image-upload"
+                className="flex flex-col items-center cursor-pointer"
+              >
                 <div className="bg-gray-100 rounded-full p-3 mb-3">
-                  {imagePreview ? <ImageIcon className="h-6 w-6 text-gray-600" /> : <Upload className="h-6 w-6 text-gray-600" />}
+                  {imagePreview ? (
+                    <ImageIcon className="h-6 w-6 text-gray-600" />
+                  ) : (
+                    <Upload className="h-6 w-6 text-gray-600" />
+                  )}
                 </div>
                 <span className="text-sm font-medium text-gray-700 mb-1">
-                  {imagePreview ? "Change project image" : "Upload single project image"}
+                  {imagePreview
+                    ? "Change project image"
+                    : "Upload single project image"}
                 </span>
                 <span className="text-xs text-gray-500">
                   Single image only • PNG, JPG, GIF up to 10MB

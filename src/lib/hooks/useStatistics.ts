@@ -1,13 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";
-import { StatisticsData_sets, StatisticsSuperadmin, StatisticsProject, SuperAdminDatasetLanguage } from "@/app/types/statistics";
+import { StatisticsData_sets, StatisticsSuperadmin, StatisticsProject,StatisticsProjectContributer, SuperAdminDatasetLanguage } from "@/app/types/statistics";
 import { PaginationResponse, SinglerResponse, AllResponse, UserLog } from "@/app/types/global";
 import { useSession } from "next-auth/react";
 
 interface SingleStatisticsData_sets extends SinglerResponse<StatisticsData_sets> { }
 interface UserLogResponse extends PaginationResponse<UserLog> { }
 interface SingleStatisticsSuperadmin extends SinglerResponse<StatisticsSuperadmin> { }
+
+interface StatisticsProjectContributerData extends SinglerResponse<StatisticsProjectContributer> { }
 interface SingleStatisticsProject extends SinglerResponse<StatisticsProject> { }
 interface SingleSuperAdminDatasetLanguage extends SinglerResponse<SuperAdminDatasetLanguage> { }
 
@@ -94,7 +96,43 @@ export function useSingleprojecStatisticsProject(project_id: string) {
                 }
                 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
                 const response = await axios.get<SingleStatisticsProject>(
-                    `${baseUrl}/statistics/project/project?project_id=${project_id}`,
+                    `${baseUrl}/statistics/project/project${project_id ? `?project_id=${project_id}` : ''}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${session.access_token}`,
+                        },
+                    }
+                );
+                return response.data;
+            } catch (error) {
+                if (axios.isAxiosError(error)) {
+                    const message =
+                        error.response?.data?.message || "Failed to fetch project statistics";
+                    toast.error("Error", { description: message });
+                }
+                throw error;
+            }
+        },
+        enabled: !!session?.access_token,
+        retry: (failureCount, error) => {
+            if (error.message === "No authentication token available") return false;
+            return failureCount < 2;
+        },
+    });
+}
+
+export function useSingleContributerStatisticsProject( contributor_id: string,task_id: string,) {
+    const { data: session } = useSession();
+    return useQuery<StatisticsProjectContributerData>({
+        queryKey: ["SingleontributerStatisticsProject", task_id,contributor_id],
+        queryFn: async () => {
+            try {
+                if (!session?.access_token) {
+                    throw new Error("No authentication token available");
+                }
+                const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+                const response = await axios.get<StatisticsProjectContributerData>(
+                    `${baseUrl}/task-distribution-monitoring/statistics/${contributor_id}/${task_id}/overview`,
                     {
                         headers: {
                             Authorization: `Bearer ${session.access_token}`,
@@ -171,8 +209,8 @@ export function useSingleProjectManagerStatisticsData_sets(view_type: string, pr
                     throw new Error("No authentication token available");
                 }
                 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-                const url = project_id 
-                    ? `${baseUrl}/statistics/project/project-dataset?project_id=${project_id}&view_type=${view_type}` 
+                const url = project_id
+                    ? `${baseUrl}/statistics/project/project-dataset?project_id=${project_id}&view_type=${view_type}`
                     : `${baseUrl}/statistics/project/project-dataset?view_type=${view_type}`;
                 const response = await axios.get<SingleStatisticsData_sets>(url, {
                     headers: {

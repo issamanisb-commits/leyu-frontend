@@ -45,7 +45,7 @@ import {
 import { Task, MicroTask } from "@/app/types/project";
 import { formatDateMedium } from "@/app/types/dateUtils";
 import { useGetTaskUserDetail } from "@/lib/hooks/useProject";
-import { UserTask } from "@/app/types/global";
+import { TaskMembers, UserTask } from "@/app/types/global";
 import TaskDetailsGeneral from "@/app/components/projectManager/taskDetailsGeneral";
 interface PaginationProps {
   pageCount: number;
@@ -287,8 +287,8 @@ const TaskDetailPage: React.FC = () => {
     verificationStatus: userVerificationStatus,
   });
 
-  const users: UserTask[] = usersData?.data?.result || [];
-  const userColumns: ColumnDef<UserTask>[] = [
+  const users: TaskMembers[] = usersData?.data?.result || [];
+  const userColumns: ColumnDef<TaskMembers>[] = [
     {
       accessorKey: "fullName",
       header: "Full Name",
@@ -305,7 +305,7 @@ const TaskDetailPage: React.FC = () => {
       enableSorting: true,
       cell: ({ row }) => (
         <span className="flex items-center space-x-1">
-          <span>{row.original.user.email}</span>
+          <span>{row.original.email}</span>
         </span>
       ),
     },

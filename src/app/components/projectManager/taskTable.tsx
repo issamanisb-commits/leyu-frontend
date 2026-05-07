@@ -448,7 +448,8 @@ const TaskTable: React.FC<TaskTableProps> = ({
     try {
       await addTaskMutation.mutateAsync(formData);
     } catch (error) {
-      // Error handling is done in useAddTask hook
+      // Re-throw so the form stays open on error
+      throw error;
     }
   };
 
@@ -462,6 +463,42 @@ const TaskTable: React.FC<TaskTableProps> = ({
           <span className="font-medium text-gray-900">
             {row.original.user?.first_name} {row.original.user?.middle_name}{" "}
             {row.original.user?.last_name}
+          </span>
+        </div>
+      ),
+    },
+      {
+    accessorKey: "role",
+    header: "Role",
+    cell: ({ row }) => {
+      const role = row.original?.role;
+
+      const roleColors: Record<string, string> = {
+        SuperAdmin: "text-red-500",
+        Contributor: "text-blue-500",
+        ProjectManager: "text-green-500",
+        Facilitator: "text-yellow-500",
+        Reviewer: "text-purple-500",
+        QualityAssurance:"text-red-500",
+      };
+
+      const roleClass = roleColors[role] || "bg-gray-500 text-white";
+
+      return (
+        <span className={`px-2 py-1 rounded text-sm font-medium  ${roleClass}`}>
+          {role}
+        </span>
+      );
+    },
+  },
+     {
+      accessorKey: "phoneNumber",
+      header: "Phone number",
+      enableSorting: true,
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <span className="font-medium text-gray-900">
+            {row.original.user.phone_number} 
           </span>
         </div>
       ),

@@ -27,6 +27,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 interface Language {
   id: string;
@@ -65,6 +66,7 @@ interface RolesResponse {
 
 export default function Users() {
   const { data: session } = useSession();
+  const { t } = useTranslation();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(7);
   const [searchQuery, setSearchQuery] = useState("");
@@ -104,7 +106,7 @@ export default function Users() {
     });
 
   const userRoleOptions = [
-    { id: "all", label: "All Roles" },
+    { id: "all", label: t('allRoles') },
     ...(rolesResponse?.data.map((role: { id: string; name: string }) => ({
       id: role.id,
       label: role.name,
@@ -178,7 +180,7 @@ export default function Users() {
               <SelectContent>
                 {rolesLoading ? (
                   <SelectItem value="loading" disabled>
-                    Loading roles...
+                    {t('loadingRoles')}
                   </SelectItem>
                 ) : (
                   userRoleOptions.map((option) => (
@@ -201,12 +203,12 @@ export default function Users() {
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="mr-2" /> New User
+                <Plus className="mr-2" /> {t('newUser')}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <p className="mb-8 font-bold ">Add New User</p>
+                <p className="mb-8 font-bold ">{t('addNewUser')}</p>
               </DialogHeader>
               <AddUserForm oncloseAction={() => setIsDialogOpen(false)} />
             </DialogContent>
@@ -225,7 +227,7 @@ export default function Users() {
             setPageSize: handlePageSizeChange,
             showingText:
               userTotalElements > 0
-                ? `Showing ${companyStartRecord} to ${companyEndRecord} out of ${userTotalElements} records`
+                ? `${companyStartRecord} - ${companyEndRecord} / ${userTotalElements}`
                 : "",
           }}
         />

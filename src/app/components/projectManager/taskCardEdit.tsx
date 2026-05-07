@@ -383,7 +383,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
                 <p className="text-red-500 text-sm">{errors.description}</p>
               )}
             </div>
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
                 Language <span className="text-red-500">*</span>
               </label>
@@ -406,7 +406,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick }) => {
               {errors.language_id && (
                 <p className="text-red-500 text-sm">{errors.language_id}</p>
               )}
-            </div>
+            </div> */}
             {task.distribution_started ? null : (
               <>
                 {" "}

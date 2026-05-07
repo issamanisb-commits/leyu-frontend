@@ -344,7 +344,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
           );
         } else {
           return (
-            <div className="min-w-[100px] text-center text-gray-400">
+            <div className="min-w-[100px] text-gray-400">
               No audio
             </div>
           );

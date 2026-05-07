@@ -8,6 +8,7 @@ import axios from "axios";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { countryCodes } from "@/app/types/countryCodes";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 interface Role {
   id: string;
@@ -49,6 +50,7 @@ export default function AddUserForm({
   oncloseAction: () => void;
 }) {
   const { data: session } = useSession();
+  const { t } = useTranslation();
 
   const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const languageId = e.target.value;
@@ -289,7 +291,7 @@ export default function AddUserForm({
     
         <div>
           <label className="block text-gray-700 mb-1">
-            First Name<span className="text-red-500">*</span>
+            {t('firstName')}<span className="text-red-500">*</span>
           </label>
           <input
             type="text"
@@ -304,7 +306,7 @@ export default function AddUserForm({
      
       <div>
         <label className="block text-gray-700 mb-1">
-          Middle Name (Father Name)<span className="text-red-500">*</span>
+          {t('middleName')}<span className="text-red-500">*</span>
         </label>
         <input
           type="text"
@@ -317,7 +319,7 @@ export default function AddUserForm({
       </div>
       <div>
         <label className="block text-gray-700 mb-1">
-          Last Name (Grandfather Name)<span className="text-red-500">*</span>
+          {t('lastName')}<span className="text-red-500">*</span>
         </label>
         <input
           type="text"
@@ -332,7 +334,7 @@ export default function AddUserForm({
 
       <div>
         <label className="block text-gray-700 mb-1">
-          Email<span className="text-red-500">*</span>
+          {t('emailLabel')}<span className="text-red-500">*</span>
         </label>
         <input
           type="email"
@@ -345,7 +347,7 @@ export default function AddUserForm({
 
       <div>
         <label className="block text-gray-700 mb-1">
-          Password<span className="text-red-500">*</span>
+          {t('passwordLabel')}<span className="text-red-500">*</span>
         </label>
         <input
           type="password"
@@ -366,7 +368,7 @@ export default function AddUserForm({
             }`}
           >
             {passwordStrength.isStrong
-              ? "Strong password"
+              ? t('strongPassword')
               : passwordStrength.message}
           </p>
         )}
@@ -374,7 +376,7 @@ export default function AddUserForm({
 
       <div>
         <label className="block text-gray-700 mb-1">
-          Date of Birth<span className="text-red-500">*</span>
+          {t('dateOfBirth')}<span className="text-red-500">*</span>
         </label>
         <input
           type="date"
@@ -398,7 +400,7 @@ export default function AddUserForm({
 
       <div>
         <label className="block text-gray-700 mb-1">
-          Gender<span className="text-red-500">*</span>
+          {t('genderLabel')}<span className="text-red-500">*</span>
         </label>
         <select
           value={formData.gender}
@@ -406,15 +408,15 @@ export default function AddUserForm({
           className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-primary"
           required
         >
-          <option value="">Select Gender</option>
-          <option value="Male">Male</option>
-          <option value="Female">Female</option>
+          <option value="">{t('selectGender')}</option>
+          <option value="Male">{t('male')}</option>
+          <option value="Female">{t('female')}</option>
         </select>
       </div>
 
       <div>
         <label className="block text-gray-700 mb-1">
-          Role<span className="text-red-500">*</span>
+          {t('roleLabel')}<span className="text-red-500">*</span>
         </label>
         <select
           value={formData.role_id}
@@ -425,7 +427,7 @@ export default function AddUserForm({
           required
           disabled={rolesLoading}
         >
-          <option value="">Select Role</option>
+          <option value="">{t('selectRole')}</option>
           {rolesResponse?.data?.map((role) => (
             <option key={role.id} value={role.id}>
               {role.name} - {role.description}
@@ -433,13 +435,13 @@ export default function AddUserForm({
           ))}
         </select>
         {rolesLoading && (
-          <p className="text-sm text-gray-500">Loading roles...</p>
+          <p className="text-sm text-gray-500">{t('loadingRoles')}</p>
         )}
       </div>
 
       <div>
         <label className="block text-gray-700 mb-1">
-          Phone Number<span className="text-red-500">*</span>
+          {t('phoneNumber')}<span className="text-red-500">*</span>
         </label>
         <div className="flex">
           <select
@@ -483,7 +485,7 @@ export default function AddUserForm({
       {!hideLanguageAndDialect && (
         <>
           <div>
-            <label className="block text-gray-700 mb-2">Language</label>
+            <label className="block text-gray-700 mb-2">{t('languageLabel')}</label>
             <select
               name="language_id"
               value={formData.language_id}
@@ -491,7 +493,7 @@ export default function AddUserForm({
               className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-primary"
               disabled={languageLoading || !languageResponseData?.data.length}
             >
-              <option value="">Select Language</option>
+              <option value="">{t('selectLanguageOption')}</option>
               {languageResponseData?.data.map((language) => (
                 <option key={language.id} value={language.id}>
                   {language.name}
@@ -501,7 +503,7 @@ export default function AddUserForm({
           </div>
           {formData.language_id && (
             <div>
-              <label className="block text-gray-700 mb-2">Dialect</label>
+              <label className="block text-gray-700 mb-2">{t('dialectLabel')}</label>
               <select
                 name="dialect_id"
                 value={formData.dialect_id}
@@ -509,7 +511,7 @@ export default function AddUserForm({
                 className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:border-primary"
                 disabled={dialectsLoading || !dialectResponseData?.data.length}
               >
-                <option value="">Select Dialect</option>
+                <option value="">{t('selectDialect')}</option>
                 {dialectResponseData?.data.map((zone) => (
                   <option key={zone.id} value={zone.id}>
                     {zone.name}
@@ -523,7 +525,7 @@ export default function AddUserForm({
 
       <div className="flex justify-end space-x-2 pt-4">
         <Button variant="outline" type="button" onClick={oncloseAction}>
-          Cancel
+          {t('cancel')}
         </Button>
         <Button
           type="submit"
@@ -533,7 +535,7 @@ export default function AddUserForm({
             !passwordStrength.isStrong
           }
         >
-          {addUserMutation.isPending ? "Creating..." : "Create User"}
+          {addUserMutation.isPending ? t('creating') : t('createUser')}
         </Button>
       </div>
     </form>

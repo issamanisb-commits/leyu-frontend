@@ -3,7 +3,7 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import axios from "axios";
 
-type UserRole = "SuperAdmin" | "ProjectManager" | "Facilitator" | "Reviewer";
+type UserRole = "SuperAdmin" | "ProjectManager" | "Facilitator" | "Reviewer" | "QualityAssurance";
 
 interface ExtendedUser {
   id: string;

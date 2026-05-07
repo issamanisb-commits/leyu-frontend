@@ -39,14 +39,19 @@ import {
 } from "@tanstack/react-table";
 import type { SortingState } from "@tanstack/react-table";
 import WaveSurfer from "wavesurfer.js";
-import { UserData, UserTask } from "@/app/types/global";
+import {
+  UserData,
+  UserTask,
+  UserTaskSpecfic,
+  TaskMembers,
+} from "@/app/types/global";
 import { formatDateMedium } from "@/app/types/dateUtils";
 import { FilterComponent } from "@/components/ui/filterComponent";
-
+import { useDatasetDetails } from "@/lib/hooks/useDatasetDetails";
 interface TaskDatasetProps {
   task_id: string;
   contributor_id: string;
-  user?: UserTask["user"] | null;
+  user?: TaskMembers | null;
   taskType?: string;
 }
 
@@ -96,7 +101,7 @@ const PaginationControls: React.FC<{ pagination: PaginationProps }> = ({
         </Button>
         {Array.from(
           { length: Math.max(1, pagination.pageCount) },
-          (_, i) => i + 1
+          (_, i) => i + 1,
         ).map((pageNumber) => (
           <Button
             key={pageNumber}
@@ -136,11 +141,19 @@ const TaskDatasetSubmit: React.FC<TaskDatasetProps> = ({
   const [sorting, setSorting] = useState<SortingState>([]);
   const filterColumns = [{ accessorKey: "name", header: "Project Name" }];
   const [filters, setFilters] = useState<{ [key: string]: string | boolean }>(
-    {}
+    {},
   );
+  const [modalSubmissionId, setModalSubmissionId] = useState<string | null>(
+    null,
+  );
+  const {
+    data: detailedDataset,
+    isLoading: isDetailedDatasetLoading,
+    refetch,
+  } = useDatasetDetails(modalSubmissionId);
   const handleFilterChange = (
     newFilters: { [key: string]: string | boolean },
-    endpoint: string
+    endpoint: string,
   ) => {
     setFilters(newFilters);
     setPage(1);
@@ -159,7 +172,7 @@ const TaskDatasetSubmit: React.FC<TaskDatasetProps> = ({
   });
 
   const TaskDatasets: ReviewerDatset[] = Array.isArray(
-    TaskDatasetsData?.data?.result
+    TaskDatasetsData?.data?.result,
   )
     ? (TaskDatasetsData?.data.result as ReviewerDatset[])
     : [];
@@ -170,9 +183,9 @@ const TaskDatasetSubmit: React.FC<TaskDatasetProps> = ({
     : 0;
   const TaskDatasetEndRecord = Math.min(
     page * pageSize,
-    TaskDatasetTotalElements
+    TaskDatasetTotalElements,
   );
- 
+
   const TaskDatasetColumns: ColumnDef<ReviewerDatset>[] = [
     {
       accessorKey: "code",
@@ -227,9 +240,7 @@ const TaskDatasetSubmit: React.FC<TaskDatasetProps> = ({
             <div
               className={`flex items-center max-w-[90px] ml-2 rounded-2xl px-1 py-1 bg-[#FFF6F3] text-[#B32F0D]`}
             >
-              <span className={`h-2 w-2 rounded-full `}>
-             
-              </span>
+              <span className={`h-2 w-2 rounded-full `}></span>
               <span className="truncate ml-2">Flagged</span>
             </div>
           )}
@@ -504,6 +515,9 @@ const TaskDatasetSubmit: React.FC<TaskDatasetProps> = ({
             <Dialog>
               <DialogTrigger asChild>
                 <button
+                  onClick={() => {
+                    setModalSubmissionId(row.original.id);
+                  }}
                   aria-label="More options"
                   className="px-3 py-1 text-sm rounded-2xl bg-primary text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
@@ -539,7 +553,7 @@ const TaskDatasetSubmit: React.FC<TaskDatasetProps> = ({
                     )}
                   </span>
                 </div>
-                <div className="h-30m w-full mb-10 mt-10 rounded-2xl border px-5 py-5 justify-center border-gray-300">
+                {/* <div className="h-30m w-full mb-10 mt-10 rounded-2xl border px-5 py-5 justify-center border-gray-300">
                   <span className="font-semibold text-gray-800">
                     Micro task Information
                   </span>
@@ -549,50 +563,159 @@ const TaskDatasetSubmit: React.FC<TaskDatasetProps> = ({
                         ? formatDateMedium(row.original.microTask.created_date)
                         : "N/A"}
                     </span>
+                     <span className="font-semibold text-gray-500 px-2.5 py-0.5 mr-4">
+                      {row.original.microTask.created_date
+                        ? formatDateMedium(row.original.microTask.)
+                        : "N/A"}
+                    </span>
                   </div>
-                </div>
-                <div className="border border-gray-300 rounded-2xl p-5">
-                  <span className="font-semibold text-gray-600 ">
-                    Review Status
-                  </span>
+                </div> */}
+                <div className="mt-4 p-5">
+                
+                  <div className="border border-gray-300 rounded-2xl p-6 bg-white">
+                    <h3 className="font-semibold text-gray-800 text-lg mb-4">
+                      Review Status
+                    </h3>
 
-                  <div
-                    className={` h-auto w-full mb-10 mt-10  justify-center ${row.original.status === "Rejected" ? "" : row.original.status === "Flagged" ? "border-yellow-300" : "border-green-300"} `}
-                  >
-                    {row.original.status === "Approved" && (
-                      <div className="flex row rounded-2xl border px-5 py-5 border-primary  text-sm ">
-                        <span className="font-semibold text-primary ">
-                          {row.original.annotation
-                            ? row.original.annotation
-                            : ""}
-                        </span>
+                    {isDetailedDatasetLoading && (
+                      <div className="flex justify-center items-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin" />
                       </div>
                     )}
-                    {row.original.status === "Rejected" && (
-                      <div className=" rounded-2xl border px-5 py-5 border-[#D03710]  text-sm ">
-                        <div className="flex flex-row">
-                          <span className="font-semibold text-[#D03710] text-sm ">
-                            Rejection reason:{" "}
-                            {row.original.rejectionReasons?.length > 0
-                              ? row.original.rejectionReasons
-                                  .map((flag) => flag.rejectionType?.name)
-                                  .join(", ")
-                              : ""}
-                          </span>
-                        </div>
-                        <div className="flex flex-row">
-                          <span className="font-semibold text-[#D03710] ">
-                            Rejection comment:{" "}
-                            {row.original.rejectionReasons?.length > 0
-                              ? row.original.rejectionReasons
-                                  .map((flag) => flag.comment)
-                                  .join(", ")
-                              : ""}
-                          </span>
-                        </div>
-                      </div>
+
+                    {!isDetailedDatasetLoading && detailedDataset && (
+                      <>
+                        {Array.isArray(detailedDataset.reviews) &&
+                        detailedDataset.reviews.length > 0 ? (
+                          <div>
+                            {/* Summary */}
+                            <p className="text-sm text-gray-600 mb-6">
+                              This task has been reviewed by{" "}
+                              {detailedDataset.reviews.length} reviewer(s)
+                            </p>
+
+                            {/* Reviews List */}
+                            <div className="space-y-6">
+                              {detailedDataset.reviews.map(
+                                (review: any, idx: number) => (
+                                  <div key={idx}>
+                                    {/* Reviewer Header */}
+                                    <div className="flex items-start justify-between mb-3">
+                                      <div>
+                                        <p className="text-sm text-gray-600">
+                                          Reviewer {idx + 1} •{" "}
+                                          <span className="font-medium">
+                                            {review.reviewer_name || "Unknown"}
+                                          </span>
+                                        </p>
+                                        <p className="text-sm text-gray-600 mt-1">
+                                          Reviewed on •{" "}
+                                          {review.created_date
+                                            ? new Date(
+                                                review.created_date,
+                                              ).toLocaleDateString("en-US", {
+                                                year: "numeric",
+                                                month: "short",
+                                                day: "numeric",
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                              })
+                                            : "N/A"}
+                                        </p>
+                                      </div>
+
+                                      {/* Status Badge */}
+                                      <span
+                                        className={`px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap ml-4 ${
+                                          review.review_status?.toLowerCase() ===
+                                          "approved"
+                                            ? "bg-green-100 text-green-700"
+                                            : review.review_status?.toLowerCase() ===
+                                                "rejected"
+                                              ? "bg-red-100 text-red-700"
+                                              : review.review_status?.toLowerCase() ===
+                                                  "flagged"
+                                                ? "bg-yellow-100 text-yellow-700"
+                                                : "bg-gray-100 text-gray-700"
+                                        }`}
+                                      >
+                                        {review.review_status || "Pending"}
+                                      </span>
+                                    </div>
+
+                                    {/* Score */}
+                                    {review.score !== undefined && (
+                                      <p className="text-sm text-gray-600 mb-3">
+                                        Score:{" "}
+                                        <span className="font-medium">
+                                          {review.score}
+                                        </span>
+                                      </p>
+                                    )}
+
+                                    {/* Approved - Annotations */}
+                                    {review.review_status?.toLowerCase() ===
+                                      "approved" && (
+                                      <div className="border border-green-300 rounded-lg p-4 bg-white">
+                                        <p className="text-sm font-semibold text-green-700 mb-2">
+                                          Annotations
+                                        </p>
+                                        {review.annotations &&
+                                        review.annotations.length > 0 ? (
+                                          <p className="text-sm text-gray-700">
+                                            {review.annotations.join(", ")}
+                                          </p>
+                                        ) : (
+                                          <p className="text-sm text-gray-600">
+                                            No annotations provided
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Rejected - Rejection Reason */}
+                                    {review.review_status?.toLowerCase() ===
+                                      "rejected" && (
+                                      <div className="border border-red-300 rounded-lg p-4 bg-white">
+                                        <p className="text-sm font-semibold text-red-700 mb-2">
+                                          Rejection Reason
+                                        </p>
+                                        {review.rejection_reason &&
+                                        review.rejection_reason.length > 0 ? (
+                                          <p className="text-sm text-red-700">
+                                            {review.rejection_reason.join(", ")}
+                                          </p>
+                                        ) : (
+                                          <p className="text-sm text-gray-600">
+                                            No rejection reason provided
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Comment */}
+                                    {review.comment && (
+                                      <div className="mt-3">
+                                        <p className="text-sm text-gray-600">
+                                          <span className="font-medium">
+                                            Comment:
+                                          </span>{" "}
+                                          {review.comment}
+                                        </p>
+                                      </div>
+                                    )}
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-gray-500 italic">
+                            No review information available
+                          </p>
+                        )}
+                      </>
                     )}
-               
                   </div>
                 </div>
               </DialogContent>
@@ -654,6 +777,12 @@ const TaskDatasetSubmit: React.FC<TaskDatasetProps> = ({
                   ></span>
                   {user?.is_active ? "Active" : "Deactivated"}
                 </Badge>
+                <Badge
+                  className="ml-5 p-2 h-5"
+                  variant={user?.is_active ? "active" : "deactivated"}
+                >
+                  Score:{user?.score}
+                </Badge>
               </h2>
               <div className="flex items-center gap-2 flex-row ">
                 <span
@@ -695,7 +824,7 @@ const TaskDatasetSubmit: React.FC<TaskDatasetProps> = ({
                                 <span>
                                   {flexRender(
                                     header.column.columnDef.header,
-                                    header.getContext()
+                                    header.getContext(),
                                   )}
                                 </span>
                                 {header.column.getCanSort() && (
@@ -741,7 +870,7 @@ const TaskDatasetSubmit: React.FC<TaskDatasetProps> = ({
                             >
                               {flexRender(
                                 cell.column.columnDef.cell,
-                                cell.getContext()
+                                cell.getContext(),
                               )}
                             </TableCell>
                           );

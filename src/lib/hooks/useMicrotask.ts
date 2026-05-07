@@ -184,6 +184,61 @@ export function useGetTaskMicroTaskDetail({
     },
   });
 };
+export function useGetTaskMicroTaskDetailQA({
+  microTaskPage,
+  microTaskPageSize,
+  searchQuery,
+  verificationStatus,
+  token,
+  taskId
+}: NewTaskMicroTaskProps) {
+  const { data: session } = useSession();
+  return useQuery<NewTaskMicroTaskResponse>({
+    queryKey: ["taskMicroTasksQA", taskId, microTaskPage, microTaskPageSize, searchQuery, verificationStatus],
+    queryFn: async () => {
+
+
+      try {
+        if (!session?.access_token) {
+          throw new Error("No authentication token available");
+        }
+        const params = new URLSearchParams({
+          page: String(microTaskPage),
+          "limit": String(microTaskPageSize),
+          ...(searchQuery && { "search": searchQuery }),
+          ...(verificationStatus && { "verification-status": verificationStatus }),
+        });
+
+        const baseUrl =
+          process.env.NEXT_PUBLIC_API_BASE_URL;
+
+        const response = await axios.get<NewTaskMicroTaskResponse>(
+          `${baseUrl}/reviewer-task/qa/microtasks/${taskId}?${params.toString()}`,
+
+          {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          }
+        );
+
+        return response.data as NewTaskMicroTaskResponse;
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          const message =
+            error.response?.data?.message || "Failed to fetch User profiles";
+          toast.error("Error", { description: message });
+        }
+        throw error;
+      }
+    },
+    enabled: !!session?.access_token, // Only fetch when token is available
+    retry: (failureCount, error) => {
+      if (error.message === "No authentication token available") return false;
+      return failureCount < 2;
+    },
+  });
+};
 export function useGetTaskMicroTaskDetailFilter({
   microTaskPage,
   microTaskPageSize,
@@ -522,6 +577,54 @@ export const useAddMicroTasksFromAudio = ({
           toast.error("Error", {
             description:
               error.response?.data?.message || "Failed to import microtasks",
+          });
+        }
+      },
+    }
+  );
+};
+
+export const useAddMicroTasksFromImage = ({
+  taskId,
+}: UseMicroTaskMutationProps) => {
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
+
+  return useMutation<NewTaskMicroTaskResponse, Error, AudioUploadData>(
+    {
+      mutationFn: async (ImageUploadData) => {
+        if (!session?.access_token) {
+          throw new Error("No authentication token available");
+        }
+
+        const formData = new FormData();
+        formData.append("file", ImageUploadData.file);
+        formData.append("is_test", String(ImageUploadData.is_test));
+        formData.append("instruction", String(ImageUploadData.instruction));
+
+        const response = await axios.post<NewTaskMicroTaskResponse>(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/workspace/micro-task/${taskId}/image`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+        return response.data;
+      },
+      onSuccess: (data) => {
+        toast.success("Success", {
+          description: `Created microtask with image successfully`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["taskMicroTasks"] });
+      },
+      onError: (error) => {
+        if (axios.isAxiosError(error)) {
+          toast.error("Error", {
+            description:
+              error.response?.data?.message || "Failed to create microtask with image",
           });
         }
       },

@@ -41,6 +41,7 @@ import { ReviewerDatset } from "@/app/types/project";
 import { SortingState } from "@tanstack/react-table";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 interface MicroTaskListProps {
   taskId: string;
@@ -71,10 +72,11 @@ interface RejectPayload {
 const PaginationControls: React.FC<{ pagination: PaginationProps }> = ({
   pagination,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-2">
-        <span className="md:text-sm text-xs text-gray-500">Showing</span>
+        <span className="md:text-sm text-xs text-gray-500">{t('showing')}</span>
         <select
           value={pagination.pageSize}
           onChange={(e) => {
@@ -139,6 +141,7 @@ const MicroTaskListSubission: React.FC<MicroTaskListProps> = ({
   const [microTaskPage, setMicroTaskPage] = useState(1);
   const [microTaskPageSize, setMicroTaskPageSize] = useState(10);
   const [sorting, setSorting] = useState<SortingState>([]);
+  const { t } = useTranslation();
   const [selectedRejectionReasonId, setSelectedRejectionReasonId] =
     useState<string>("");
   const [rejectionComment, setRejectionComment] = useState<string>("");
@@ -189,7 +192,7 @@ const MicroTaskListSubission: React.FC<MicroTaskListProps> = ({
       payload: RejectPayload;
     }) => {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/workspace/data-set/reject/${microTaskId}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/reviewer-task/reject/${microTaskId}`,
         {
           method: "PUT",
           headers: {
@@ -215,7 +218,7 @@ const MicroTaskListSubission: React.FC<MicroTaskListProps> = ({
   const approveMutation = useMutation({
     mutationFn: async (microTaskId: string) => {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/workspace/data-set/approve/${microTaskId}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/reviewer-task/approve/${microTaskId}`,
         {
           method: "PUT",
           headers: {
@@ -270,19 +273,19 @@ const MicroTaskListSubission: React.FC<MicroTaskListProps> = ({
   const microTaskColumns: ColumnDef<ReviewerDatset>[] = [
     {
       accessorKey: "code",
-      header: "Code",
+      header: t('codeHeader'),
     },
     {
       accessorKey: "microTask.code",
-      header: "MicroTask Code",
+      header: t('microTaskCodeHeader'),
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: t('statusHeader'),
     },
     {
       accessorKey: "contributor.email",
-      header: "Contributor",
+      header: t('contributorHeader'),
     },
   ];
 
@@ -441,15 +444,12 @@ const MicroTaskListSubission: React.FC<MicroTaskListProps> = ({
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Reject MicroTask</DialogTitle>
+            <DialogTitle>{t('rejectMicroTask')}</DialogTitle>
           </DialogHeader>
           <div className="p-4">
             <div className="mb-4">
-              <label
-                htmlFor="rejectionReason"
-                className="text-sm font-semibold"
-              >
-                Rejection Reason
+              <label htmlFor="rejectionReason" className="text-sm font-semibold">
+                {t('rejectionReasonLabel')}
               </label>
               <select
                 id="rejectionReason"
@@ -457,7 +457,7 @@ const MicroTaskListSubission: React.FC<MicroTaskListProps> = ({
                 onChange={(e) => setSelectedRejectionReasonId(e.target.value)}
                 className="w-full border rounded-md p-2 mt-1"
               >
-                <option value="">Select a reason</option>
+                <option value="">{t('selectAReason')}</option>
                 {rejectionReasons.map(
                   (reason: { id: string; name: string }) => (
                     <option key={reason.id} value={reason.id}>
@@ -468,11 +468,8 @@ const MicroTaskListSubission: React.FC<MicroTaskListProps> = ({
               </select>
             </div>
             <div className="mb-4">
-              <label
-                htmlFor="rejectionComment"
-                className="text-sm font-semibold"
-              >
-                Comment (Optional)
+              <label htmlFor="rejectionComment" className="text-sm font-semibold">
+                {t('commentOptional')}
               </label>
               <textarea
                 id="rejectionComment"
@@ -480,30 +477,15 @@ const MicroTaskListSubission: React.FC<MicroTaskListProps> = ({
                 onChange={(e) => setRejectionComment(e.target.value)}
                 className="w-full border rounded-md p-2 mt-1"
                 rows={4}
-                placeholder="Enter any additional comments"
+                placeholder={t('enterAdditionalComments')}
               />
             </div>
             <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsRejectDialogOpen(false);
-                  setSelectedRejectionReasonId("");
-                  setRejectionComment("");
-                }}
-              >
-                Cancel
+              <Button variant="outline" onClick={() => { setIsRejectDialogOpen(false); setSelectedRejectionReasonId(""); setRejectionComment(""); }}>
+                {t('cancel')}
               </Button>
-              <Button
-                variant="destructive"
-                onClick={submitRejection}
-                disabled={
-                  !selectedRejectionReasonId || rejectMutation.isPending
-                }
-              >
-                {rejectMutation.isPending
-                  ? "Submitting..."
-                  : "Submit Rejection"}
+              <Button variant="destructive" onClick={submitRejection} disabled={!selectedRejectionReasonId || rejectMutation.isPending}>
+                {rejectMutation.isPending ? t('submitting') : t('submitRejection')}
               </Button>
             </div>
           </div>

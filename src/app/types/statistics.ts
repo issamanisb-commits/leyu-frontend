@@ -22,6 +22,17 @@ export interface StatisticsProject {
     }
 
 }
+
+export interface StatisticsProjectContributer {
+    "pending_micro_tasks": number,
+    "completed_micro_tasks": number,
+    "rejected_datasets": number,
+    "under_review_datasets": number,
+    "total_submitted_hrs": number,
+    "total_expired_micro_tasks": number,
+   
+
+}
 export interface StatisticsProjectDatasetLanguage {
     "dialect_id": string,
     "dialect_name": string,

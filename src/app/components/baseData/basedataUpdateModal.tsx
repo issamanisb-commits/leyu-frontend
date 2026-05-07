@@ -37,6 +37,7 @@ export function BasedataUpdateModal({
     name: "",
     code: "",
     description: "",
+    ...(servicename === "country" && { continent: "" }),
   });
   useEffect(() => {
     if (initialData) {
@@ -44,6 +45,7 @@ export function BasedataUpdateModal({
         name: initialData.name,
         code: initialData.code || "",
         description: initialData.description || "",
+        ...(servicename === "country" && { continent: formData.continent }),
       });
     }
   }, [initialData]);
@@ -124,9 +126,7 @@ export function BasedataUpdateModal({
                 Cancel
               </Button>
               <Button type="submit" disabled={updateBasedataMutation.isPending}>
-                {updateBasedataMutation.isPending
-                  ? "Creating..."
-                  : `Update`}
+                {updateBasedataMutation.isPending ? "Creating..." : `Update`}
               </Button>
             </div>
           </form>

@@ -49,6 +49,7 @@ import { ReviewerDatset } from "@/app/types/project";
 import { SortingState } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { formatDateMedium } from "@/app/types/dateUtils";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 interface MicroTaskListProps {
   title: string;
@@ -113,10 +114,11 @@ interface FlagPayload {
 const PaginationControls: React.FC<{ pagination: PaginationProps }> = ({
   pagination,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between w-full">
       <div className="flex items-center gap-2">
-        <span className="md:text-sm text-xs text-gray-500">Showing</span>
+        <span className="md:text-sm text-xs text-gray-500">{t("showing")}</span>
         <select
           value={pagination.pageSize}
           onChange={(e) => {
@@ -149,7 +151,7 @@ const PaginationControls: React.FC<{ pagination: PaginationProps }> = ({
           currentPage: pagination.page,
           totalPages: pagination.pageCount,
           onPageChange: pagination.setPage,
-          buttonClassName: { active: "border-brand text-brand", inactive: "" }
+          buttonClassName: { active: "border-brand text-brand", inactive: "" },
         })}
         <Button
           size="sm"
@@ -167,14 +169,14 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   title,
   taskType,
   taskId,
-  taskStatus,
+
   searchQuery,
   verificationStatus,
   status_data,
   createdDate,
-  setVerificationStatus,
   onInnerDialogOpenChange,
 }) => {
+  const { t } = useTranslation();
   const { data: session } = useSession();
   const { data: dynamicResponsedataAnnotation, isLoading: annotationLoading } =
     useQuery<dynamicResponsedata>({
@@ -187,7 +189,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/setting/annotation`,
           {
             headers: { Authorization: `Bearer ${session.access_token}` },
-          }
+          },
         );
         return response.data;
       },
@@ -204,7 +206,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/setting/flag-type/`,
           {
             headers: { Authorization: `Bearer ${session.access_token}` },
-          }
+          },
         );
         return response.data;
       },
@@ -228,13 +230,16 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [isFlagDialogOpen, setIsFlagDialogOpen] = useState(false);
   const [selectedMicroTaskId, setSelectedMicroTaskId] = useState<string | null>(
-    null
+    null,
   );
   const [currentRowIndex, setCurrentRowIndex] = useState<number | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMicroTask, setSelectedMicroTask] =
     useState<ReviewerDatset | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [reviewedItems, setReviewedItems] = useState<
+    Record<string, "approved" | "rejected">
+  >({});
 
   // Reset page when status_data changes
   useEffect(() => {
@@ -274,9 +279,9 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   const { data: rejectionReasonsData } = useReject();
 
   const microtasks: ReviewerDatset[] = Array.isArray(
-    microtasksData?.data?.result
+    microtasksData?.data?.result,
   )
-    ? microtasksData.data.result
+    ? (microtasksData?.data?.result ?? [])
     : [];
   const rejectionReasons =
     rejectionReasonsData && Array.isArray(rejectionReasonsData.data)
@@ -299,7 +304,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
     : 0;
   const microTaskEndRecord = Math.min(
     microTaskPage * microTaskPageSize,
-    microTaskTotalElements
+    microTaskTotalElements,
   );
   const queryClient = useQueryClient();
 
@@ -308,7 +313,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
     try {
       const selectedReasons = rejectionReasons.filter(
         (reason: { id: string; name: string }) =>
-          selectedRejectionReasonIds.includes(reason.id)
+          selectedRejectionReasonIds.includes(reason.id),
       );
       await RejectMicrotask.mutateAsync({
         microTaskId,
@@ -317,9 +322,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
         flag: isRejectFlag,
       });
       toast.success("Microtask rejected successfully.");
-      queryClient.invalidateQueries({
-        queryKey: ["microtasks", taskId, microTaskPage, microTaskPageSize],
-      });
+      setReviewedItems((prev) => ({ ...prev, [microTaskId]: "rejected" }));
       setIsRejectDialogOpen(false);
       setSelectedRejectionReasonIds([]);
       setRejectionComment("");
@@ -337,11 +340,10 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
         microTaskId,
         annotation_id: selectedAnnotationId,
         annotation: selectedAnnotationName,
+        annotationIds: [selectedAnnotationId],
       });
       toast.success("Microtask approved successfully.");
-      queryClient.invalidateQueries({
-        queryKey: ["microtasks", taskId, microTaskPage, microTaskPageSize],
-      });
+      setReviewedItems((prev) => ({ ...prev, [microTaskId]: "approved" }));
       setIsApproveDialogOpen(false);
       setSelectedAnnotationId("");
     } catch (error) {
@@ -355,7 +357,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   const flagMutation = async (microTaskId: string) => {
     try {
       const selectedFlagType = flagTypes.find(
-        (flag: { id: string; name: string }) => flag.id === selectedFlagTypeId
+        (flag: { id: string; name: string }) => flag.id === selectedFlagTypeId,
       );
       await flagMicrotask.mutateAsync({
         microTaskId,
@@ -363,9 +365,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
         comment: flagComment || "",
       });
       toast.success("Microtask flagged successfully.");
-      queryClient.invalidateQueries({
-        queryKey: ["microtasks", taskId, microTaskPage, microTaskPageSize],
-      });
+      setReviewedItems((prev) => ({ ...prev, [microTaskId]: "rejected" }));
       setIsFlagDialogOpen(false);
       setSelectedFlagTypeId("");
       setFlagComment("");
@@ -380,7 +380,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
     if (currentRowIndex !== null && currentRowIndex < microtasks.length - 1) {
       const nextIndex = currentRowIndex + 1;
       setCurrentRowIndex(nextIndex);
-      setSelectedMicroTaskId(microtasks[nextIndex].id);
+      setSelectedMicroTaskId(microtasks[nextIndex].data_set_review_id);
     } else if (
       currentRowIndex === microtasks.length - 1 &&
       microTaskPage < microTaskTotalPages
@@ -414,8 +414,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   const submitRejection = () => {
     if (selectedMicroTaskId && selectedRejectionReasonIds.length > 0) {
       rejectMutation(selectedMicroTaskId);
-      handlePostMutation();
-       setIsRejectFlag(false);
+      setIsRejectFlag(false);
     } else {
       toast.error("Please select at least one rejection reason.");
     }
@@ -424,8 +423,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   const submitApproval = () => {
     if (selectedMicroTaskId && selectedAnnotationId) {
       approveMutation(selectedMicroTaskId);
-      handlePostMutation();
-       setIsRejectFlag(false);
+      setIsRejectFlag(false);
     } else {
       toast.error("Please select an annotation.");
     }
@@ -444,7 +442,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
     if (currentRowIndex !== null && currentRowIndex < microtasks.length - 1) {
       const nextIndex = currentRowIndex + 1;
       setCurrentRowIndex(nextIndex);
-      setSelectedMicroTaskId(microtasks[nextIndex].id);
+      setSelectedMicroTaskId(microtasks[nextIndex].data_set_review_id);
     } else if (
       currentRowIndex === microtasks.length - 1 &&
       microTaskPage < microTaskTotalPages
@@ -457,7 +455,11 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
       setCurrentRowIndex(null);
       setSelectedMicroTaskId(null);
       setIsRejectFlag(false);
+      setReviewedItems({});
       onInnerDialogOpenChange?.(false);
+      queryClient.invalidateQueries({
+        queryKey: ["taskMicroTasksResultReviewers"],
+      });
     }
   };
 
@@ -465,7 +467,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
     if (currentRowIndex !== null && currentRowIndex > 0) {
       const prevIndex = currentRowIndex - 1;
       setCurrentRowIndex(prevIndex);
-      setSelectedMicroTaskId(microtasks[prevIndex].id);
+      setSelectedMicroTaskId(microtasks[prevIndex].data_set_review_id);
     } else if (currentRowIndex === 0 && microTaskPage > 1) {
       setMicroTaskPage(microTaskPage - 1);
       setCurrentRowIndex(null); // Will be set to last index of previous page in useEffect
@@ -475,7 +477,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
       setCurrentRowIndex(null);
       setSelectedMicroTaskId(null);
       onInnerDialogOpenChange?.(false);
-       setIsRejectFlag(false);
+      setIsRejectFlag(false);
     }
   };
 
@@ -489,9 +491,13 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
     ) {
       if (currentRowIndex >= microtasks.length) {
         setCurrentRowIndex(microtasks.length - 1);
-        setSelectedMicroTaskId(microtasks[microtasks.length - 1].id);
+        setSelectedMicroTaskId(
+          microtasks[microtasks.length - 1].data_set_review_id,
+        );
       } else {
-        setSelectedMicroTaskId(microtasks[currentRowIndex]?.id || null);
+        setSelectedMicroTaskId(
+          microtasks[currentRowIndex]?.data_set_review_id || null,
+        );
       }
     } else if (microtasks.length === 0 && isDialogOpen && !isRefetching) {
       setIsDialogOpen(false);
@@ -504,15 +510,15 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
   const microTaskColumns: ColumnDef<ReviewerDatset>[] = [
     {
       accessorKey: "code",
-      header: "Code",
+      header: t("codeHeader"),
     },
     {
       accessorKey: "microTask.code",
-      header: "MicroTask Code",
+      header: t("microTaskCodeHeader"),
     },
     {
       accessorKey: "status",
-      header: "Status",
+      header: t("finalReviewHeader"),
       cell: ({ row }) => (
         <div className="flex flex-row">
           <div
@@ -571,7 +577,74 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                   />
                 </svg>
               </span>
-              <span className="truncate ml-2">Flagged</span>
+              <span className="truncate ml-2">{t("flagged")}</span>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "review_status",
+      header: t("yourReviewHeader"),
+      cell: ({ row }) => (
+        <div className="flex flex-row">
+          <div
+            className={`flex items-center max-w-[90px] rounded-2xl px-1 py-1 ${
+              row.original.review_status?.toLowerCase() === "approved"
+                ? "bg-[#F4FDF8]"
+                : row.original.review_status?.toLowerCase() === "rejected"
+                  ? "bg-[rgba(254,41,41,0.06)] text-[#FF0000]"
+                  : row.original.review_status?.toLowerCase() === "pending"
+                    ? "bg-[#FFF9F3]"
+                    : row.original.review_status?.toLowerCase() === "flagged"
+                      ? "bg-[#FFF6F3] text-[#B32F0D]"
+                      : "bg-purple-400"
+            }`}
+          >
+            <span
+              className={`h-2 w-2 rounded-full ${
+                row.original.review_status?.toLowerCase() === "approved"
+                  ? "bg-green-500"
+                  : row.original.review_status?.toLowerCase() === "rejected"
+                    ? "bg-red-500"
+                    : row.original.review_status?.toLowerCase() === "pending"
+                      ? "bg-orange-500"
+                      : row.original.review_status?.toLowerCase() === "flagged"
+                        ? "bg-[#B32F0D]"
+                        : "bg-purple-100"
+              }`}
+            ></span>
+            <span className="truncate ml-2">{row.original.review_status}</span>
+          </div>
+          {row.original.is_flagged && (
+            <div
+              className={`flex items-center max-w-[90px] ml-2 rounded-2xl px-1 py-1 bg-[#FFF6F3] text-[#B32F0D]`}
+            >
+              <span className={`h-2 w-2 rounded-full `}>
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M7.9395 1.5H5.1415C3.66 1.5 2.92 1.5 2.46 1.9395C2 2.3785 2 3.086 2 4.5L2.053 7.5H7.94C9.0515 7.5 9.607 7.5 9.843 7.2125C9.908 7.1335 9.956 7.0425 9.983 6.9445C10.0825 6.592 9.749 6.1675 9.082 5.318C8.8045 4.965 8.666 4.788 8.641 4.588C8.63364 4.52973 8.63364 4.47077 8.641 4.4125C8.666 4.2115 8.8045 4.035 9.082 3.682C9.749 2.8325 10.082 2.408 9.9835 2.0555C9.95542 1.95737 9.90762 1.86601 9.843 1.787C9.6065 1.5 9.051 1.5 7.9395 1.5Z"
+                    fill="#B32F0D"
+                    stroke="#B32F0D"
+                    strokeWidth="0.75"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M2 10.5V4"
+                    stroke="#B32F0D"
+                    strokeWidth="0.75"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </span>
+              <span className="truncate ml-2">{t("flagged")}</span>
             </div>
           )}
         </div>
@@ -581,19 +654,19 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
       ? [
           {
             accessorKey: "",
-            header: "Action",
+            header: t("actionHeader"),
             cell: ({ row }: { row: Row<ReviewerDatset> }) => (
               <Button
                 className="bg-primary text-white hover:bg-blue-700 flex items-center gap-2"
                 onClick={() => {
                   setCurrentRowIndex(row.index);
-                  setSelectedMicroTaskId(row.original.id);
+                  setSelectedMicroTaskId(row.original.data_set_review_id);
                   setIsDialogOpen(true);
                   onInnerDialogOpenChange?.(true);
                   window.scrollTo(0, 0);
                 }}
               >
-                Open Task
+                {t("openTask")}
               </Button>
             ),
           },
@@ -601,7 +674,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
       : []),
     {
       accessorKey: "details",
-      header: "Details",
+      header: t("detailsHeader"),
       enableSorting: false,
       cell: ({ row }) => (
         <button
@@ -653,8 +726,12 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                       setIsDialogOpen(false);
                       setCurrentRowIndex(null);
                       setSelectedMicroTaskId(null);
+                      setReviewedItems({});
                       onInnerDialogOpenChange?.(false);
                       setMicroTaskPage(1);
+                      queryClient.invalidateQueries({
+                        queryKey: ["taskMicroTasksResultReviewers"],
+                      });
                     }}
                   >
                     <svg
@@ -671,7 +748,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                     >
                       <polyline points="15 18 9 12 15 6"></polyline>
                     </svg>
-                    Micro tasks
+                    {t("microTasksBreadcrumb")}
                   </button>
                   <div className="font-semibold"></div>
                   <div className="w-10" />
@@ -681,29 +758,11 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                     <span className="font-semibold text-2xl ml-2 text-gray-700">
                       {title}
                     </span>
-                    <div
-                      className={`flex items-center space-x-1 px-2 py-2 rounded-2xl ${
-                        taskStatus ? "bg-red-500" : "bg-[#ECFDF3]"
-                      }`}
-                    >
-                      <span
-                        className={`h-2 w-2 rounded-full ${
-                          taskStatus ? "bg-red-500" : "bg-[#037847]"
-                        }`}
-                      ></span>
-                      <span
-                        className={`text-xs text-gray-600 ${
-                          taskStatus ? "text-red-500" : "text-[#037847]"
-                        }`}
-                      >
-                        {taskStatus ? "Inactive" : "Active"}
-                      </span>
-                    </div>
                   </div>
-                  <div className="flex flex-row items-start">
+                  <div className="flex flex-row items-start text-xs mt-2">
                     <span className="text-gray-500 px-2 py-1">
-                      Type:{" "}
-                      <span className="px-2 py-1 bg-primary/10 text-primary rounded">
+                      {t("typeLabel")}{" "}
+                      <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">
                         {taskType}
                       </span>
                       <span className="px-2 py-1 text-gray-500 rounded">
@@ -751,9 +810,16 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                         className="text-white rounded-2xl bg-red-600 hover:bg-red-700"
                         onClick={() =>
                           currentRowIndex !== null &&
-                          handleReject(microtasks[currentRowIndex].id)
+                          handleReject(
+                            microtasks[currentRowIndex].data_set_review_id,
+                          )
                         }
-                        disabled={currentRowIndex === null}
+                        disabled={
+                          currentRowIndex === null ||
+                          !!reviewedItems[
+                            microtasks[currentRowIndex]?.data_set_review_id
+                          ]
+                        }
                       >
                         <svg
                           width="11"
@@ -770,15 +836,22 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                             strokeLinejoin="round"
                           />
                         </svg>
-                        Reject
+                        {t("reject")}
                       </Button>
                       <Button
                         className="text-white rounded-2xl bg-[#54CB36] hover:bg-lime-600"
                         onClick={() =>
                           currentRowIndex !== null &&
-                          handleAccept(microtasks[currentRowIndex].id)
+                          handleAccept(
+                            microtasks[currentRowIndex].data_set_review_id,
+                          )
                         }
-                        disabled={currentRowIndex === null}
+                        disabled={
+                          currentRowIndex === null ||
+                          !!reviewedItems[
+                            microtasks[currentRowIndex]?.data_set_review_id
+                          ]
+                        }
                       >
                         <svg
                           width="13"
@@ -795,8 +868,37 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                             strokeLinejoin="round"
                           />
                         </svg>
-                        Approve
+                        {t("approve")}
                       </Button>
+                      {currentRowIndex !== null &&
+                        reviewedItems[
+                          microtasks[currentRowIndex]?.data_set_review_id
+                        ] && (
+                          <span
+                            className={`flex items-center gap-1 px-3 py-1 rounded-2xl text-sm font-medium ${
+                              reviewedItems[
+                                microtasks[currentRowIndex].data_set_review_id
+                              ] === "approved"
+                                ? "bg-[#F4FDF8] text-green-600"
+                                : "bg-[rgba(254,41,41,0.06)] text-red-600"
+                            }`}
+                          >
+                            <span
+                              className={`h-2 w-2 rounded-full ${
+                                reviewedItems[
+                                  microtasks[currentRowIndex].data_set_review_id
+                                ] === "approved"
+                                  ? "bg-green-500"
+                                  : "bg-red-500"
+                              }`}
+                            />
+                            {reviewedItems[
+                              microtasks[currentRowIndex].data_set_review_id
+                            ] === "approved"
+                              ? t("approve")
+                              : t("reject")}
+                          </span>
+                        )}
                     </div>
                   </div>
                   <div className="p-4 w-full flex justify-center">
@@ -807,8 +909,8 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                         <>
                           <div className="mb-4 border border-gray-100 rounded-lg px-6 py-3">
                             <div className="flex flex-row items-start mb-4 mt-4">
-                              <span className="text-gray-500 px-2 py-1">
-                                <span className="px-2 py-1 bg-primary/10 text-primary rounded">
+                              {/* <span className="text-gray-500 px-2 py-1">
+                                <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded">
                                   {taskType}
                                 </span>
                                 <span className="px-2 py-1 text-gray-500 rounded">
@@ -816,11 +918,11 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                   {createdDate
                                     ? formatDateMedium(
                                         microtasks[currentRowIndex].microTask
-                                          .created_date
+                                          .created_date,
                                       )
                                     : ""}
                                 </span>
-                              </span>
+                              </span> */}
                             </div>
                             <div className="mr-4 flex space-x-1 m-10">
                               {currentRowIndex !== null &&
@@ -848,7 +950,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                 : null}
                             </div>
                             <p className="text-xl text-primary px-4 font-medium">
-                              Question
+                              {t("questionLabel")}
                             </p>
                             <div className="mb-4 px-4 py-4 bg-[#FCFCFD]">
                               {microtasks[currentRowIndex].microTask.type ===
@@ -859,38 +961,55 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                       .text || "No text available"}
                                   </p>
                                 </>
-                              ) : (
+                              ) : microtasks[currentRowIndex].microTask.type ===
+                                "audio" ? (
                                 <>
-                                  {microtasks[currentRowIndex].microTask
-                                    .type === "audio" && (
-                                    <audio
-                                      key={`question-audio-${microtasks[currentRowIndex]?.id}`}
-                                      controls
-                                      className="w-full custom-audio-player"
-                                    >
-                                      <source
-                                        src={
-                                          microtasks[currentRowIndex].microTask
-                                            .file_path!
-                                        }
-                                        type="audio/mpeg"
-                                      />
-                                      Your browser does not support the audio
-                                      element.
-                                    </audio>
-                                  )}
+                                  <audio
+                                    key={`question-audio-${microtasks[currentRowIndex]?.data_set_review_id}`}
+                                    controls
+                                    className="w-full custom-audio-player"
+                                  >
+                                    <source
+                                      src={
+                                        microtasks[currentRowIndex].microTask
+                                          .file_path!
+                                      }
+                                      type="audio/mpeg"
+                                    />
+                                    Your browser does not support the audio
+                                    element.
+                                  </audio>
                                 </>
-                              )}
+                              ) : microtasks[currentRowIndex].microTask.type ===
+                                "image" ? (
+                                <>
+                                  <div className="flex justify-center">
+                                    <img
+                                      key={`question-image-${microtasks[currentRowIndex]?.data_set_review_id}`}
+                                      src={
+                                        microtasks[currentRowIndex].microTask
+                                          .file_path!
+                                      }
+                                      alt="Question image"
+                                      className="rounded-lg border border-gray-200 object-contain"
+                                      style={{
+                                        width: "600px",
+                                        maxHeight: "500px",
+                                      }}
+                                    />
+                                  </div>
+                                </>
+                              ) : null}
                             </div>
                             <p className="text-xl text-primary px-4 font-medium">
-                              Answer
+                              {t("answerLabel")}
                             </p>
                             <div className="px-4 py-4 bg-[#FCFCFD]">
                               {microtasks[currentRowIndex].type === "audio" &&
                               microtasks[currentRowIndex].file_path ? (
                                 <div className="space-y-2">
                                   <audio
-                                    key={`answer-audio-${microtasks[currentRowIndex]?.id}`}
+                                    key={`answer-audio-${microtasks[currentRowIndex]?.data_set_review_id}`}
                                     controls
                                     className="w-full custom-audio-player"
                                   >
@@ -913,7 +1032,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                     )}
                                     <p className="text-lg text-gray-500 font-medium break-words whitespace-normal leading-relaxed">
                                       <span className="font-semibold">
-                                        Answer:
+                                        {t("answerLabel")}:
                                       </span>{" "}
                                       {microtasks[currentRowIndex]
                                         .text_data_set || "No text available"}
@@ -941,7 +1060,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                           }
                           className="bg-white text-gray-700 border border-gray-400 rounded-1xl hover:bg-gray-200 flex items-center gap-2"
                         >
-                          Previous
+                          {t("previous")}
                         </Button>
                         <Button
                           onClick={handleNextMicroTask}
@@ -953,7 +1072,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                           }
                           className="bg-primary text-white hover:bg-blue-700 flex items-center gap-2"
                         >
-                          Next
+                          {t("next")}
                         </Button>
                       </div>
                     </div>
@@ -966,7 +1085,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
               >
                 <DialogContent className="min-h-[100vh] sm:min-h-[90vh] h-full overflow-hidden flex flex-col">
                   <DialogHeader className="shrink-0">
-                    <DialogTitle>Reject MicroTask</DialogTitle>
+                    <DialogTitle>{t("rejectMicroTask")} </DialogTitle>
                   </DialogHeader>
                   <div className="flex-1 min-h-0 overflow-y-auto px-4">
                     <div className="py-4">
@@ -975,7 +1094,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                           htmlFor="rejectionReason"
                           className="text-sm font-semibold block mb-2"
                         >
-                          Rejection Reasons
+                          {t("rejectionReasonsLabel")}
                         </label>
                         <div className="mt-2">
                           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-3">
@@ -997,12 +1116,12 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                 onClick={() =>
                                   setSelectedRejectionReasonIds(
                                     rejectionReasons.map(
-                                      (r: { id: string }) => r.id
-                                    )
+                                      (r: { id: string }) => r.id,
+                                    ),
                                   )
                                 }
                               >
-                                Select All
+                                {t("selectAll")}
                               </Button>
                               <Button
                                 type="button"
@@ -1013,7 +1132,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                   setSelectedRejectionReasonIds([])
                                 }
                               >
-                                Clear
+                                {t("clear")}
                               </Button>
                             </div>
                           </div>
@@ -1022,8 +1141,8 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                               {selectedRejectionReasonIds
                                 .map((id) =>
                                   rejectionReasons.find(
-                                    (r: { id: string }) => r.id === id
-                                  )
+                                    (r: { id: string }) => r.id === id,
+                                  ),
                                 )
                                 .filter(Boolean)
                                 .map((reason: any) => (
@@ -1037,7 +1156,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                       className="ml-1 text-primary hover:text-blue-800 focus:outline-none"
                                       onClick={() =>
                                         setSelectedRejectionReasonIds((prev) =>
-                                          prev.filter((id) => id !== reason.id)
+                                          prev.filter((id) => id !== reason.id),
                                         )
                                       }
                                       aria-label={`Remove ${reason.name}`}
@@ -1064,12 +1183,12 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                 .filter((reason: { name: string }) =>
                                   reason.name
                                     .toLowerCase()
-                                    .includes(rejectionSearch.toLowerCase())
+                                    .includes(rejectionSearch.toLowerCase()),
                                 )
                                 .map((reason: { id: string; name: string }) => {
                                   const isSelected =
                                     selectedRejectionReasonIds.includes(
-                                      reason.id
+                                      reason.id,
                                     );
                                   return (
                                     <label
@@ -1086,14 +1205,14 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                         onChange={(e) => {
                                           if (e.target.checked) {
                                             setSelectedRejectionReasonIds(
-                                              (prev) => [...prev, reason.id]
+                                              (prev) => [...prev, reason.id],
                                             );
                                           } else {
                                             setSelectedRejectionReasonIds(
                                               (prev) =>
                                                 prev.filter(
-                                                  (id) => id !== reason.id
-                                                )
+                                                  (id) => id !== reason.id,
+                                                ),
                                             );
                                           }
                                         }}
@@ -1122,14 +1241,14 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                 })
                             ) : (
                               <div className="p-4 text-center text-gray-500 text-sm">
-                                No rejection reasons available
+                                {t("noRejectionReasons")}
                               </div>
                             )}
                           </div>
                           <div className="mt-2 text-xs text-gray-600">
                             {selectedRejectionReasonIds.length > 0
-                              ? `${selectedRejectionReasonIds.length} reason${selectedRejectionReasonIds.length > 1 ? "s" : ""} selected`
-                              : "No reasons selected"}
+                              ? `${selectedRejectionReasonIds.length} reason${selectedRejectionReasonIds.length > 1 ? "s" : ""} ${t("selected")}`
+                              : `${t("noReasonsSelected")}`}
                           </div>
                         </div>
                       </div>
@@ -1138,7 +1257,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                           htmlFor="rejectionComment"
                           className="text-sm font-semibold block mb-2"
                         >
-                          Comment (Optional)
+                          {t("commentLabel")}({t("optional")})
                         </label>
                         <textarea
                           id="rejectionComment"
@@ -1146,7 +1265,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                           onChange={(e) => setRejectionComment(e.target.value)}
                           className="w-full border rounded-md p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                           rows={4}
-                          placeholder="Enter any additional comments"
+                          placeholder={t("enterAdditionalComments")}
                         />
                       </div>
                       <div className="mb-4">
@@ -1193,7 +1312,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                 strokeLinejoin="round"
                               />
                             </svg>
-                            <span>Flag</span>
+                            <span> {t("flag")}</span>
                           </label>
 
                           <label
@@ -1228,7 +1347,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                           </label>
                         </div>
                         <p className="text-xs text-gray-500 mt-2">
-                          Select "Flag" to mark the item as flagged
+                          {t("selectFlagHint")}
                         </p>
                       </div>
                     </div>
@@ -1245,7 +1364,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                           setRejectionSearch("");
                         }}
                       >
-                        Cancel
+                        {t("cancel")}
                       </Button>
                       <Button
                         variant="destructive"
@@ -1259,10 +1378,10 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                         {RejectMicrotask.isPending ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Submitting...
+                            {t("submitting")}
                           </>
                         ) : (
-                          "Submit Rejection"
+                          t("submitRejectionBtn")
                         )}
                       </Button>
                     </div>
@@ -1275,7 +1394,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
               >
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Approve MicroTask</DialogTitle>
+                    <DialogTitle>{t("approveMicroTask")}</DialogTitle>
                   </DialogHeader>
                   <div className="p-4">
                     <div className="mb-4">
@@ -1283,7 +1402,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                         htmlFor="annotation"
                         className="text-sm font-semibold"
                       >
-                        Annotation
+                        {t("annotation")}
                       </label>
                       <select
                         id="annotation"
@@ -1291,21 +1410,21 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                         onChange={(e) => {
                           setSelectedAnnotationId(e.target.value);
                           const selectedAnnotation = annotations.find(
-                            (annotation) => annotation.id === e.target.value
+                            (annotation) => annotation.id === e.target.value,
                           );
                           setSelectedAnnotationName(
-                            selectedAnnotation?.name || ""
+                            selectedAnnotation?.name || "",
                           );
                         }}
                         className="w-full border rounded-md p-2 mt-1"
                       >
-                        <option value="">Select an annotation</option>
+                        <option value="">{t("selectAnnotation")}</option>
                         {annotations.map(
                           (annotation: { id: string; name: string }) => (
                             <option key={annotation.id} value={annotation.id}>
                               {annotation.name}
                             </option>
-                          )
+                          ),
                         )}
                       </select>
                     </div>
@@ -1317,7 +1436,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                           setSelectedAnnotationId("");
                         }}
                       >
-                        Cancel
+                        {t("cancel")}
                       </Button>
                       <Button
                         className="bg-lime-500 text-white hover:bg-lime-600"
@@ -1329,10 +1448,10 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                         {appproveMicrotask.isPending ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Submitting...
+                            {t("submitting")}
                           </>
                         ) : (
-                          "Submit Approval"
+                          t("submitApprovalBtn")
                         )}
                       </Button>
                     </div>
@@ -1361,7 +1480,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                         onChange={(e) => setSelectedFlagTypeId(e.target.value)}
                         className="w-full border rounded-md p-2 mt-1"
                       >
-                        <option value="">Select a flag type</option>
+                        <option value="">{t("selectAReason")}</option>
                         {flagTypes.map((flag: { id: string; name: string }) => (
                           <option key={flag.id} value={flag.id}>
                             {flag.name}
@@ -1374,7 +1493,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                         htmlFor="flagComment"
                         className="text-sm font-semibold"
                       >
-                        Comment (Optional)
+                        {t("commentLabel")}({t("optional")})
                       </label>
                       <textarea
                         id="flagComment"
@@ -1394,7 +1513,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                           setFlagComment("");
                         }}
                       >
-                        Cancel
+                        {t("cancel")}
                       </Button>
                       <Button
                         className="bg-yellow-500 text-white hover:bg-yellow-600"
@@ -1406,10 +1525,10 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                         {flagMicrotask.isPending ? (
                           <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Submitting...
+                            {t("submitting")}
                           </>
                         ) : (
-                          "Submit Flag"
+                          t("submitFlag")
                         )}
                       </Button>
                     </div>
@@ -1447,7 +1566,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                 <span>
                                   {flexRender(
                                     header.column.columnDef.header,
-                                    header.getContext()
+                                    header.getContext(),
                                   )}
                                 </span>
                                 {header.column.getCanSort() && (
@@ -1480,7 +1599,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                             >
                               {flexRender(
                                 cell.column.columnDef.cell,
-                                cell.getContext()
+                                cell.getContext(),
                               )}
                             </TableCell>
                           ))}
@@ -1533,7 +1652,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
             <DialogContent className="max-w-full w-full h-[100vh] bg-white text-black overflow-y-scroll">
               <DialogHeader>
                 <DialogTitle className="text-black">
-                  Micro Task Details
+                  {t("microTaskDetails")}
                 </DialogTitle>
               </DialogHeader>
               {selectedMicroTask && (
@@ -1541,7 +1660,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                   <div className="border mt-4 border-gray-100 px-4 py-4 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-black mb-1">
-                        Code
+                        {t("code")}
                       </label>
                       <p className="text-sm text-black bg-white p-2 rounded">
                         {selectedMicroTask.code}
@@ -1549,22 +1668,23 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-black mb-1">
-                        Status
+                        {t("status")}
                       </label>
                       <p className="text-sm text-black bg-white p-2 rounded">
-                        {selectedMicroTask.status} {"  "} {selectedMicroTask.is_flagged ? ",Flagged" : ""}
+                        {selectedMicroTask.status} {"  "}{" "}
+                        {selectedMicroTask.is_flagged ? ",Flagged" : ""}
                       </p>
                     </div>
                   </div>
                   {selectedMicroTask.microTask && (
                     <div className="space-y-4 border mt-4 border-gray-100 px-4 py-4 rounded-2xl">
                       <h3 className="text-lg font-medium text-black">
-                        MicroTask Information
+                        {t("microTaskInformation")}
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-black mb-1">
-                            MicroTask Code
+                            {t("microTaskCode")}
                           </label>
                           <p className="text-sm text-black bg-white p-2 rounded">
                             {selectedMicroTask.microTask.code}
@@ -1572,7 +1692,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-black mb-1">
-                            Type
+                            {t("type")}
                           </label>
                           <p className="text-sm text-black bg-white p-2">
                             {selectedMicroTask.microTask.type}
@@ -1582,7 +1702,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                       {selectedMicroTask.microTask.text && (
                         <div>
                           <label className="block text-sm font-medium text-black mb-2">
-                            MicroTask Text
+                            {t("microTaskText")}
                           </label>
                           <div className="bg-white p-2">
                             <p className="text-sm text-black whitespace-pre-wrap">
@@ -1595,10 +1715,10 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                         selectedMicroTask.microTask.file_path && (
                           <div>
                             <label className="block text-sm font-medium text-black mb-2">
-                              Audio File
+                              {t("audioFile")}
                             </label>
                             <audio
-                              key={`modal-question-audio-${selectedMicroTask?.id}`}
+                              key={`modal-question-audio-${selectedMicroTask?.data_set_review_id}`}
                               controls
                               className="w-full"
                             >
@@ -1606,7 +1726,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                 src={selectedMicroTask.microTask.file_path}
                                 type="audio/mpeg"
                               />
-                              Your browser does not support the audio element.
+                              {t("audioNotSupported")}
                             </audio>
                           </div>
                         )}
@@ -1615,12 +1735,12 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                   <div className="space-y-4 border border-gray-100 px-2 py-2 rounded-2xl">
                     <div className="space-y-4">
                       <h3 className="text-lg rounded-2xl font-medium text-black">
-                        Response Data
+                        {t("responseData")}
                       </h3>
                       {selectedMicroTask.text_data_set && (
                         <div>
                           <label className="block text-sm font-medium text-black mb-2">
-                            Text Response
+                            {t("textResponse")}
                           </label>
                           <div className="bg-white p-2">
                             <p className="text-sm text-black whitespace-pre-wrap">
@@ -1633,10 +1753,10 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                         selectedMicroTask.file_path && (
                           <div>
                             <label className="block text-sm font-medium text-black mb-2">
-                              Audio Response
+                              {t("audioResponse")}
                             </label>
                             <audio
-                              key={`modal-answer-audio-${selectedMicroTask?.id}`}
+                              key={`modal-answer-audio-${selectedMicroTask?.data_set_review_id}`}
                               controls
                               className="w-full"
                             >
@@ -1644,7 +1764,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                                 src={selectedMicroTask.file_path}
                                 type="audio/mpeg"
                               />
-                              Your browser does not support the audio element.
+                              {t("audioNotSupported")}
                             </audio>
                           </div>
                         )}
@@ -1652,7 +1772,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-black mb-1">
-                          Response Type
+                          {t("responseType")}
                         </label>
                         <p className="text-sm text-black bg-white p-2 rounded">
                           {selectedMicroTask.type}
@@ -1666,7 +1786,7 @@ const MicroTaskList: React.FC<MicroTaskListProps> = ({
                       className="px-4 py-2 text-white rounded-md hover:bg-blue-700 transition-colors"
                       style={{ backgroundColor: "#095FAF" }}
                     >
-                      Close
+                      {t("close")}
                     </button>
                   </div>
                 </div>

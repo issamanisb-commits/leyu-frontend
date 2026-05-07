@@ -6,24 +6,29 @@ import { TaskResponseData } from "@/app/types/project";
 import CreateTaskInstruction from "@/app/components/projectManager/createTaskInstruction";
 import UpdateTAskForm from "@/app/components/projectManager/updateTaskForm";
 import UpdateProjectModal from "../projectManager/updatePayment";
+import { useTranslation } from "@/lib/hooks/useTranslation";
+import { ChevronDown } from "lucide-react";
 
 interface TaskCardProps {
   task: TaskResponseData;
   type: boolean;
 }
 const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
+  const { t } = useTranslation();
   const [isInstructionFullScreen, setIsInstructionFullScreen] = useState(false);
   const [editTaskScreen, setEditTaskScreen] = useState(false);
   const [showCreateInstructionForm, setShowCreateInstructionForm] =
     useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [selectedInstruction, setSelectedInstruction] = useState<any>(null);
+  const [showInstruction, setShowInstruction] = useState(false);
   const handleOpenInstruction = (instruction: TaskInstructions) => {
     setSelectedInstruction(instruction);
     setTimeout(() => {
       setIsInstructionFullScreen(true);
     }, 100);
   };
+
   const EditSVGPayment: React.FC = () => {
     return (
       <>
@@ -120,6 +125,7 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
             taskInstructions={selectedInstruction}
             open={isInstructionFullScreen}
             setOpen={setIsInstructionFullScreen}
+            task={task}
           />
         </>
       ) : (
@@ -169,35 +175,35 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                         strokeWidth="1.8"
                       />
                     </svg>
-                    Basic Information <EditSVG />
+                    {t("basicInformation")}
                   </h3>
 
                   <p className="text-sm break-words  text-gray-600 mb-4">
-                    {task.description || "No description available."}
+                    {task.description || t("noDescriptionAvailable")}
                   </p>
 
                   <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Task Type
+                        {t("taskType")}
                       </span>
                       <span className="text-purple-600 bg-purple-100 rounded-full px-2.5 py-0.5 mt-1 inline-block w-fit">
-                        {task.taskType?.task_type || "N/A"}
+                        {task.taskType?.task_type || t("naValue")}
                       </span>
                     </div>
 
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Language
+                        {t("language")}
                       </span>
                       <span className="text-gray-600 mt-1">
-                        {task.language?.name || "N/A"}
+                        {task.language?.name || t("naValue")}
                       </span>
                     </div>
 
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Contributor Test
+                        {t("contributorTest")}
                       </span>
                       <span
                         className={`mt-1 rounded-full px-2.5 py-0.5 text-xs font-medium w-fit
@@ -207,13 +213,13 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                         : "bg-red-100 text-red-700"
                     }`}
                       >
-                        {task.require_contributor_test ? "Yes" : "No"}
+                        {task.require_contributor_test ? t("yes") : t("no")}
                       </span>
                     </div>
 
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Public Access
+                        {t("publicAccess")}
                       </span>
                       <span
                         className={`mt-1 rounded-full px-2.5 py-0.5 text-xs font-medium w-fit
@@ -223,7 +229,7 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                         : "bg-red-100 text-red-700"
                     }`}
                       >
-                        {task.is_public ? "Yes" : "No"}
+                        {task.is_public ? t("yes") : t("no")}
                       </span>
                     </div>
                   </div>
@@ -252,13 +258,13 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                         strokeWidth="1.8"
                       />
                     </svg>
-                    Demographics & Targeting <EditSVG />
+                    {t("demographicsTargeting")} <EditSVG />
                   </h3>
 
                   <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Age Range
+                        {t("ageRange")}
                       </span>
                       <span className="text-gray-600 mt-1">
                         {task.taskRequirement?.age?.min ?? "–"} –{" "}
@@ -268,7 +274,7 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
 
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Gender
+                        {t("genderLabel")}
                       </span>
                       <span className="text-gray-600 mt-1">
                         Female {task.taskRequirement?.gender?.female ?? "  "}%,
@@ -278,7 +284,7 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
 
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Dialect Specific
+                        {t("dialectSpecific")}
                       </span>
                       <span
                         className={`mt-1 rounded-full px-2.5 py-0.5 text-xs font-medium w-fit
@@ -289,20 +295,20 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                     }`}
                       >
                         {task.taskRequirement.is_dialect_specific
-                          ? "Yes"
-                          : "No"}
+                          ? t("yes")
+                          : t("no")}
                       </span>
                     </div>
 
                     <div className="flex flex-col ">
                       <span className="font-semibold text-gray-800">
-                        Dialect(s)
+                        {t("dialects")}
                       </span>
                       <div className="flex ">
                         <span className=" text-gray-600 mt-1 bg-gray-200 px-2 py-1 rounded-2xl">
                           {task.taskRequirement?.dialects
                             ?.map((d) => d.name)
-                            .join(", ") || "N/A"}
+                            .join(", ") || t("naValue")}
                         </span>
                       </div>
                     </div>
@@ -331,13 +337,13 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                         strokeWidth="1.8"
                       />
                     </svg>
-                    Location & Sectors <EditSVG />
+                    {t("locationSectors")} <EditSVG />
                   </h3>
 
                   <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Location Specific
+                        {t("locationSpecific")}
                       </span>
                       <span
                         className={`mt-1 rounded-full px-2.5 py-0.5 text-xs font-medium w-fit
@@ -348,20 +354,20 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                     }`}
                       >
                         {task.taskRequirement.is_location_specific
-                          ? "Yes"
-                          : "No"}
+                          ? t("yes")
+                          : t("no")}
                       </span>
                     </div>
 
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Location(s)
+                        {t("locations")}
                       </span>
                       <span className="text-gray-600 mt-1">
                         {Array.isArray(task.taskRequirement?.locations)
                           ? task.taskRequirement.locations
                               .map((l) => l.name)
-                              .join(", ") || "N/A"
+                              .join(", ") || t("naValue")
                           : task.taskRequirement?.locations &&
                               typeof task.taskRequirement.locations ===
                                 "object" &&
@@ -371,13 +377,13 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                                   name: string;
                                 }
                               ).name
-                            : "N/A"}
+                            : t("naValue")}
                       </span>
                     </div>
 
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Sector Specific
+                        {t("sectorSpecific")}
                       </span>
                       <span
                         className={`mt-1 rounded-full px-2.5 py-0.5 text-xs font-medium w-fit
@@ -387,18 +393,20 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                         : "bg-red-100 text-red-700"
                     }`}
                       >
-                        {task.taskRequirement.is_sector_specific ? "Yes" : "No"}
+                        {task.taskRequirement.is_sector_specific
+                          ? t("yes")
+                          : t("no")}
                       </span>
                     </div>
 
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Sector(s)
+                        {t("sectors")}
                       </span>
                       <span className="text-gray-600 mt-1">
                         {task.taskRequirement?.sectors
                           ?.map((s) => s.name)
-                          .join(", ") || "N/A"}
+                          .join(", ") || t("naValue")}
                       </span>
                     </div>
                   </div>
@@ -430,27 +438,28 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                         strokeLinecap="round"
                       />
                     </svg>{" "}
-                    Payment
+                    {t("payment")}
                     <EditSVGPayment />
                   </h3>
 
                   <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Contributor credit per microtask
+                        {t("contributorCreditPerMicrotask")}
                       </span>
                       <span className="text-gray-600 mt-1">
                         {task.payment?.contributor_credit_per_microtask ||
-                          "N/A"}
+                          t("naValue")}
                       </span>
                     </div>
 
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        Reviewer credit per microtask
+                        {t("reviewerCreditPerMicrotask")}
                       </span>
                       <span className="text-gray-600 mt-1">
-                        {task.payment?.reviewer_credit_per_microtask || "N/A"}
+                        {task.payment?.reviewer_credit_per_microtask ||
+                          t("naValue")}
                       </span>
                     </div>
                   </div>
@@ -478,7 +487,7 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                   }}
                 >
                   <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                    Task Instruction
+                    {t("taskInstruction")}
                   </h3>
                   {type ? (
                     <>
@@ -494,62 +503,139 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                         className="border mb-2 border-gray-300 hover:border-blue-500 text-primary px-4 py-2 rounded-lg flex items-center space-x-2"
                       >
                         <span className="text-xl">+</span>
-                        <span>Add Instruction</span>
+                        <span>{t("addInstruction")}</span>
                       </button>
                     </>
                   ) : (
                     <></>
                   )}
-                  <div className="  mb-4">
-                    {task.taskInstructions?.length > 0 ? (
-                      task.taskInstructions.map((instruction) => (
-                        <div
-                          key={instruction.id}
-                          className="border mb-2 border-gray-300 rounded-lg px-2 py-2  space-x-2"
-                        >
-                          <span className="text-sm flex-wrap text-gray-700 break-words">
-                            {instruction.title}
-                          </span>
-                          <button
-                            onClick={() => handleOpenInstruction(instruction)}
-                            style={{ touchAction: "manipulation" }}
-                          >
-                            <svg
-                              width="25"
-                              height="25"
-                              viewBox="0 0 35 35"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
+
+                  <div>
+                    <button
+                      onClick={() => setShowInstruction(!showInstruction)}
+                      className={`w-full flex items-center justify-between p-4 text-left text-sm font-medium text-gray-500 hover:bg-gray-50 ${showInstruction ? "bg-gray-50" : "bg-white"}`}
+                    >
+                      <div className="flex items-center space-x-2">
+                       
+                        <span>Instructions</span>
+                      </div>
+                      <ChevronDown
+                        className={`h-5 w-5 text-gray-400 transition-transform ${
+                          showInstruction ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                    {showInstruction && (
+                      <>
+                        <div className="mb-4">
+                          {task.taskInstruction ? (
+                            <div
+                              key={task.taskInstruction?.id}
+                              className="border mb-2 border-gray-300 rounded-lg px-3 py-3 flex flex-col"
                             >
-                              <rect
-                                width="34.1091"
-                                height="34.1091"
-                                rx="5.81818"
-                                fill="#095FAF"
-                                fillOpacity="0.1"
-                              />
-                              <path
-                                d="M17.8651 12.4641L22.2629 13.635M16.9236 15.9611L19.1216 16.547M17.0332 22.5505L17.9121 22.7854C20.3993 23.4487 21.643 23.7794 22.6231 23.2165C23.6024 22.6546 23.9359 21.4174 24.6019 18.9449L25.5443 15.447C26.2113 12.9736 26.5438 11.7373 25.9782 10.7627C25.4126 9.78802 24.1698 9.4573 21.6817 8.79495L20.8028 8.56004C18.3155 7.89677 17.0719 7.56606 16.0927 8.12892C15.1125 8.69086 14.779 9.92804 14.1121 12.4006L13.1706 15.8984C12.5036 18.3719 12.1701 19.6081 12.7367 20.5828C13.3023 21.5565 14.5459 21.8881 17.0332 22.5505Z"
-                                stroke="#095FAF"
-                                strokeWidth="1.65818"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                              <path
-                                d="M17.0544 25.2957L16.1774 25.5352C13.6957 26.2105 12.4557 26.5486 11.4774 25.9747C10.5009 25.4017 10.1674 24.1414 9.50325 21.6192L8.5627 18.0522C7.89758 15.5309 7.56502 14.2697 8.12973 13.2767C8.61797 12.4172 9.68473 12.4485 11.0666 12.4485"
-                                stroke="#095FAF"
-                                strokeWidth="1.65818"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </button>
+                              {/* TITLE */}
+                              <span className="text-sm text-gray-700 break-words">
+                                {task.taskInstruction?.title}
+                              </span>
+
+                              {/* BADGE */}
+                              <span className="mt-2 px-2 py-1 text-sm font-medium rounded-2xl bg-[#e7ecf2] text-[#095FAF] w-fit">
+                                Contributor
+                              </span>
+
+                              {/* BUTTON (bottom-right) */}
+                              <div className="mt-auto flex justify-end pt-3">
+                                <button
+                                  onClick={() =>
+                                    handleOpenInstruction(
+                                      task.taskInstruction as TaskInstructions,
+                                    )
+                                  }
+                                  className="border border-gray-300 hover:border-blue-500 text-primary px-4 py-2 rounded-lg flex items-center"
+                                >
+                                  <span className="text-sm">
+                                    View Instruction
+                                  </span>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500"></p>
+                          )}
                         </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500">
-                        No instructions added.
-                      </p>
+                        <div className="mb-4">
+                          {task.reviewerInstruction ? (
+                            <div
+                              key={task.reviewerInstruction?.id}
+                              className="border mb-2 border-gray-300 rounded-lg px-3 py-3 flex flex-col"
+                            >
+                              {/* TITLE */}
+                              <span className="text-sm text-gray-700 break-words">
+                                {task.reviewerInstruction?.title}
+                              </span>
+
+                              {/* BADGE */}
+                              <span className="mt-2 px-2 py-1 text-sm font-medium rounded-2xl bg-[#FCEFFF] text-[#8500A3] w-fit">
+                                Reviewer
+                              </span>
+
+                              {/* BUTTON (bottom-right) */}
+                              <div className="mt-auto flex justify-end pt-3">
+                                <button
+                                  onClick={() =>
+                                    handleOpenInstruction(
+                                      task.reviewerInstruction as TaskInstructions,
+                                    )
+                                  }
+                                  className="border border-gray-300 hover:border-blue-500 text-primary px-4 py-2 rounded-lg flex items-center"
+                                >
+                                  <span className="text-sm">
+                                    View Instruction
+                                  </span>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500"></p>
+                          )}
+                        </div>
+                        <div className="mb-4">
+                          {task.qaInstruction ? (
+                            <div
+                              key={task.qaInstruction?.id}
+                              className="border mb-2 border-gray-300 rounded-lg px-3 py-3 flex flex-col"
+                            >
+                              {/* TITLE */}
+                              <span className="text-sm text-gray-700 break-words">
+                                {task.qaInstruction?.title}
+                              </span>
+
+                              {/* BADGE */}
+                              <span className="mt-2 px-2 py-1 text-sm font-medium rounded-2xl bg-[#f1f1f1] text-[#9747FF] w-fit">
+                                QA
+                              </span>
+
+                              {/* BUTTON (bottom-right) */}
+                              <div className="mt-auto flex justify-end pt-3">
+                                <button
+                                  onClick={() =>
+                                    handleOpenInstruction(
+                                      task.qaInstruction as TaskInstructions,
+                                    )
+                                  }
+                                  className="border border-gray-300 hover:border-blue-500 text-primary px-4 py-2 rounded-lg flex items-center"
+                                >
+                                  <span className="text-sm">
+                                    View Instruction
+                                  </span>
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-gray-500"></p>
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -579,46 +665,56 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                         strokeLinejoin="round"
                       />
                     </svg>
-                    Task Configuration <EditSVG />
+                    {t("taskConfiguration")} <EditSVG />
                   </h3>
-                  <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                  <div className="grid grid-cols-1 gap-3 text-sm">
                     <div className="flex flex-col">
-                      <span className="font-medium">Batch Size:</span>
-                      <span className="text-gray-600 p-1">
+                      <span className="font-semibold text-gray-800">
+                        {t("batchSize")}
+                      </span>
+                      <span className="text-gray-600 mt-1">
                         {task.taskRequirement.batch}
                       </span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-medium">
-                        Approximate time per batch:
+                      <span className="font-semibold text-gray-800">
+                        {t("maxReviewerPerDataset")}
                       </span>
-                      <span className="text-gray-600 p-1">
+                      <span className="text-gray-600 mt-1">
+                        {task.taskRequirement?.max_reviewer_per_dataset || "-"}
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-gray-800">
+                        {t("approxTimePerBatch")}
+                      </span>
+                      <span className="text-gray-600 mt-1">
                         {task.taskRequirement.appriximate_time_per_batch}
                       </span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-medium">
-                        Maximum contributors assignment per facilitator:
+                      <span className="font-semibold text-gray-800">
+                        {t("maxContributorAssignment")}
                       </span>
-                      <span className="text-gray-600 p-1">
+                      <span className="text-gray-600 mt-1">
                         {task.taskRequirement.max_contributor_per_facilitator}
                       </span>
                     </div>
                     {task.taskType.task_type === "text-audio" && (
                       <>
                         <div className="flex flex-col">
-                          <span className="font-medium">
-                            Maximum audio length:
+                          <span className="font-semibold text-gray-800">
+                            {t("maximumAudioLength")}
                           </span>
-                          <span className="text-gray-600 p-1">
+                          <span className="text-gray-600 mt-1">
                             {task.taskRequirement.maximum_seconds}
                           </span>
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-medium">
-                            Minimum audio length:
+                          <span className="font-semibold text-gray-800">
+                            {t("minAudioLength")}
                           </span>
-                          <span className="text-gray-600 p-1">
+                          <span className="text-gray-600 mt-1">
                             {task.taskRequirement.minimum_seconds}
                           </span>
                         </div>
@@ -627,83 +723,74 @@ const TaskDetailsGeneral: React.FC<TaskCardProps> = ({ task, type }) => {
                     {task.taskType.task_type != "text-audio" && (
                       <>
                         <div className="flex flex-col">
-                          <span className="font-medium">
-                            Maximum characters length:
+                          <span className="font-semibold text-gray-800">
+                            {t("maximumCharactersLength")}
                           </span>
-                          <span className="text-gray-600 p-1">
+                          <span className="text-gray-600 mt-1">
                             {task.taskRequirement.maximum_characters_length}
                           </span>
                         </div>
                         <div className="flex flex-col">
-                          <span className="font-medium">
-                            Minimum characters length:
+                          <span className="font-semibold text-gray-800">
+                            {t("minCharLength")}
                           </span>
-                          <span className="text-gray-600 p-1">
+                          <span className="text-gray-600 mt-1">
                             {task.taskRequirement.minimum_characters_length}
                           </span>
                         </div>
                       </>
                     )}
                     <div className="flex flex-col">
-                      <span className="font-medium">
-                        Reviewer Completion time in Day
+                      <span className="font-semibold text-gray-800">
+                        {t("reviewerCompletionTime")}
                       </span>
-                      <span className="text-gray-600 p-1">
+                      <span className="text-gray-600 mt-1">
                         {task.reviewer_completion_time_limit != null
                           ? `${Math.round(task.reviewer_completion_time_limit / 24)} day${Math.round(task.reviewer_completion_time_limit / 24) === 1 ? "" : "s"}`
                           : "-"}
                       </span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-medium">
-                        Contributors Completion Time :
+                      <span className="font-semibold text-gray-800">
+                        {t("contributorCompletionTime")}
                       </span>
-                      <span className="text-gray-600 p-1">
+                      <span className="text-gray-600 mt-1">
                         {task.contributor_completion_time_limit != null
                           ? `${Math.round(task.contributor_completion_time_limit / 24)} day${Math.round(task.contributor_completion_time_limit / 24) === 1 ? "" : "s"}`
                           : "-"}
                       </span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-medium">
-                        Maximum submission per microtask:
+                      <span className="font-semibold text-gray-800">
+                        {t("maxSubmissionPerMicrotask")}
                       </span>
-                      <span className="text-gray-600 p-1">
+                      <span className="text-gray-600 mt-1">
                         {task?.taskRequirement
-                          ?.max_contributor_per_micro_task || ""}
+                          ?.max_contributor_per_micro_task || "-"}
                       </span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-medium">
-                        Maximum assignment per contributor:
+                      <span className="font-semibold text-gray-800">
+                        {t("maxAssignmentPerContributor")}
                       </span>
-                      <span className="text-gray-600 p-1">
+                      <span className="text-gray-600 mt-1">
                         {task?.taskRequirement
-                          ?.max_micro_task_per_contributor || ""}
+                          ?.max_micro_task_per_contributor || "-"}
                       </span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="font-medium">
-                        Max dataset per reviewer:
+                      <span className="font-semibold text-gray-800">
+                        {t("maxDatasetPerReviewer")}
                       </span>
-                      <span className="text-gray-600 p-1">
-                        {task?.taskRequirement?.max_dataset_per_reviewer || ""}
+                      <span className="text-gray-600 mt-1">
+                        {task?.taskRequirement?.max_dataset_per_reviewer || "-"}
                       </span>
                     </div>
-                    {/* <div className="flex flex-col">
-                      <span className="font-medium">
-                        Expected total contributors:
-                      </span>
-                      <span className="text-gray-600 p-1">
-                        {task?.taskRequirement
-                          ?.expected_number_of_total_contributors || "50"}
-                      </span>
-                    </div> */}
                     <div className="flex flex-col">
-                      <span className="font-medium">
-                        Maximum Retry per mico Task:
+                      <span className="font-semibold text-gray-800">
+                        {t("maxRetryPerMicroTask")}
                       </span>
-                      <span className="text-gray-600 p-1">
+                      <span className="text-gray-600 mt-1">
                         {task.taskRequirement.max_retry_per_task}
                       </span>
                     </div>

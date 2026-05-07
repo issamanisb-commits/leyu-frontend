@@ -11,13 +11,13 @@ import {
   RemoveFacilitatorContributor,
 } from "@/lib/hooks/useFetchUser";
 import { toast } from "sonner";
-import { UserTask } from "@/app/types/global";
+import { TaskMembers, UserTask } from "@/app/types/global";
 
 interface ShowFacilltatorContributorsProps {
   onCancel: () => void;
   taskID: string;
   open: boolean;
-  selectedFacilitator?: UserTask | null;
+  selectedFacilitator?: TaskMembers | null;
 }
 
 const ShowFacilltatorContributors: React.FC<
@@ -35,7 +35,7 @@ const ShowFacilltatorContributors: React.FC<
     refetch,
   } = showFacilltatorContributorsFiltered({
     page,
-    user_id: selectedFacilitator?.user.id || "",
+    user_id: selectedFacilitator?.id || "",
     taskID,
     pageSize,
     searchQuery: debouncedTaskSearch,
@@ -77,7 +77,7 @@ const ShowFacilltatorContributors: React.FC<
   const handleRemoveUser = async (userId: string) => {
     try {
       await removeUserMutation.mutateAsync({
-        facilitator_id: selectedFacilitator?.user.id,
+        facilitator_id: selectedFacilitator?.id,
         contributor_ids: [userId],
         task_id: taskID,
       });
@@ -131,8 +131,8 @@ const ShowFacilltatorContributors: React.FC<
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">
             Assigned Contributors to{" "}
-            {selectedFacilitator?.user.first_name ||
-              selectedFacilitator?.user.email ||
+            {selectedFacilitator?.first_name ||
+              selectedFacilitator?.email ||
               "Facilitator"}
           </DialogTitle>
         </DialogHeader>

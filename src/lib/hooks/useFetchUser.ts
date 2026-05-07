@@ -464,14 +464,18 @@ export function userRoleProfilesFilterUnassigned({
   const { data: session } = useSession();
   let usertype = "facilitator";
 
-  if (role) {
-    const normalizedRole = role.toLowerCase();
-    if (normalizedRole === "reviewers") {
-      usertype = "reviewer";
-    } else if (normalizedRole === "contributors") {
-      usertype = "contributor";
-    }
+ if (role) {
+  const normalizedRole = role.toLowerCase();
+  
+  if (normalizedRole === "reviewers") {
+    usertype = "reviewer";
+  } else if (normalizedRole === "contributors") {
+    usertype = "contributor";
+  } else if (normalizedRole === "qualityAssurance") {
+    usertype = "qualityAssurance"; 
   }
+}
+console.log(usertype)
   const buildParams = () => {
 
   
@@ -533,11 +537,13 @@ export function userRoleProfilesFilterUnassigned({
       const params = buildParams();
       const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL!;
 
+          console.log("role",role)
       const endpoint =
         usertype === 'contributor'
           ? `${baseUrl}/project-mgmt/task/${taskId}/get-contributors-by-task-requirement`
           : `${baseUrl}/project-mgmt/task/${taskId}/unassigned-users`;
 
+          console.log(params.toString())
       const response = await axios.get<UserProfilesRoleResponse>(
         `${endpoint}?${params.toString()}`,
         {

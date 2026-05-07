@@ -4,8 +4,25 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactStrictMode: true,
    images: {
-
     unoptimized: true,
+    domains: [
+      '164.90.209.220',
+      'api.leyu.icogacc.com',
+      'leyu-frontend.vercel.app',
+      'localhost'
+    ],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+      {
+        protocol: 'http',
+        hostname: '164.90.209.220',
+        port: '9000',
+        pathname: '/leyu/**',
+      },
+    ],
   },
   env: {
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,

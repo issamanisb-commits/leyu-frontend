@@ -33,10 +33,12 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
   const debouncedTaskSearch = useDebounce(taskSearchQuery, 500);
   const [verificationStatus, setVerificationStatus] = useState<string>();
   const memberTypeUpperCase =
-    memberType === "Reviewers"
-      ? "Reviewer"
-      : memberType === "Contributors"
-        ? "Contributor"
+  memberType === "Reviewers"
+    ? "Reviewer"
+    : memberType === "Contributors"
+      ? "Contributor"
+      : memberType === "QualityAssurance"
+        ? "QualityAssurance"
         : "Facilitator";
 
   const [filters, setFilters] = useState<{ [key: string]: string | boolean }>({
@@ -66,7 +68,7 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
 
   const handleFilterChange = (
     newFilters: { [key: string]: string | boolean },
-    endpoint: string
+    endpoint: string,
   ) => {
     setFilters(newFilters);
     setPage(1);
@@ -80,7 +82,7 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
       setCachedUsers((prev) => {
         const newUsers = usersData.data.result.filter(
           (newUser: any) =>
-            !prev.some((cachedUser) => cachedUser.email === newUser.email)
+            !prev.some((cachedUser) => cachedUser.email === newUser.email),
         );
         return [...prev, ...newUsers];
       });
@@ -90,6 +92,7 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
   const addUserMutation = AddTaskUser();
 
   const [activeTab, setActiveTab] = useState("users");
+   localStorage.removeItem(`selectedProjectMembers_${taskId}`);
   const [selectedUsers, setSelectedUsers] = useState<string[]>(() => {
     const saved = localStorage.getItem(`selectedProjectMembers_${taskId}`);
     return saved ? JSON.parse(saved) : [];
@@ -125,14 +128,14 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
     setSelectedUsers((prev) =>
       prev.includes(email)
         ? prev.filter((id) => id !== email)
-        : [...prev, email]
+        : [...prev, email],
     );
   };
 
   useEffect(() => {
     localStorage.setItem(
       `selectedProjectMembers_${taskId}`,
-      JSON.stringify(selectedUsers)
+      JSON.stringify(selectedUsers),
     );
   }, [selectedUsers, taskId]);
 
@@ -145,6 +148,7 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
       await addUserMutation.mutateAsync({
         memberType,
         emails: selectedUsers,
+        qa_ids: selectedUserDetails.map((user: any) => user.id),
         taskId,
       });
       toast.success(`${memberType} added successfully!`);
@@ -161,7 +165,7 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
   const totalPages = Math.ceil(totalUsers / pageSize);
 
   const handlePageSizeChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
+    event: React.ChangeEvent<HTMLSelectElement>,
   ) => {
     setPageSize(Number(event.target.value));
     setPage(1);
@@ -245,7 +249,7 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
                       setManualEmail(e.target.value);
                       setEmailError("");
                     }}
-                    placeholder="Add email manually..."
+                    placeholder="Add new user manually..."
                     className={`w-full px-4 py-2 border ${
                       emailError ? "border-red-500" : "border-gray-300"
                     } rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`}
@@ -276,13 +280,13 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
                                 className="h-4 w-4 text-primary focus:ring-blue-500 border-gray-300 rounded"
                                 checked={
                                   usersData?.data?.result?.every((user: any) =>
-                                    selectedUsers.includes(user.email)
+                                    selectedUsers.includes(user.email),
                                   ) && usersData?.data?.result?.length > 0
                                 }
                                 onChange={(e) => {
                                   const allVisibleEmails =
                                     usersData?.data?.result?.map(
-                                      (user: any) => user.email
+                                      (user: any) => user.email,
                                     ) || [];
                                   if (e.target.checked) {
                                     setSelectedUsers((prev) => [
@@ -295,8 +299,8 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
                                     setSelectedUsers((prev) =>
                                       prev.filter(
                                         (email) =>
-                                          !allVisibleEmails.includes(email)
-                                      )
+                                          !allVisibleEmails.includes(email),
+                                      ),
                                     );
                                   }
                                 }}
@@ -392,6 +396,28 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
                               </button>
                             </th>
                             <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Score
+                              <button
+                                type="button"
+                                className="ml-1 focus:outline-none"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 w-4 inline-block"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 9l4-4 4 4m0 6l-4 4-4-4"
+                                  />
+                                </svg>
+                              </button>
+                            </th>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Status
                               <button
                                 type="button"
@@ -446,6 +472,11 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
                               <td className="px-4 py-2 whitespace-nowrap text-xs">
                                 <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
                                   {memberType}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2 whitespace-nowrap text-xs">
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                  {user?.score?.score}
                                 </span>
                               </td>
                               <td className="px-4 py-2 whitespace-nowrap text-xs">
@@ -516,7 +547,7 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
                         </button>
                         {Array.from(
                           { length: totalPages },
-                          (_, i) => i + 1
+                          (_, i) => i + 1,
                         ).map((p) => (
                           <button
                             type="button"
@@ -574,9 +605,9 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
                   </>
                 ) : (
                   <div className="relative flex flex-col items-center justify-center py-8">
-                    <img 
-                      src="/empty.svg" 
-                      alt="No users found" 
+                    <img
+                      src="/empty.svg"
+                      alt="No users found"
                       className="w-32 h-32 opacity-50"
                     />
                   </div>
@@ -618,8 +649,8 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
                                 if (e.target.checked) {
                                   setSelectedUsers(
                                     selectedUserDetails.map(
-                                      (user: any) => user.email
-                                    )
+                                      (user: any) => user.email,
+                                    ),
                                   );
                                 } else {
                                   setSelectedUsers([]);
@@ -647,7 +678,7 @@ const CreateProjectMember: React.FC<CreateProjectMemberProps> = ({
                       <tbody className="bg-white divide-y divide-gray-200">
                         {selectedUsers.map((email) => {
                           const user = selectedUserDetails.find(
-                            (u: any) => u.email === email
+                            (u: any) => u.email === email,
                           );
                           return (
                             <tr

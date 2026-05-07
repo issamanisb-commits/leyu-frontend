@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "./data-table";
 import AddBasedataForm from "./addBasedataForm";
 import { BasedataUpdateModal } from "./basedataUpdateModal";
+import { BasedataAllterantiveUpdateModal } from "./basedataAllterantive";
 import { DeleteBasedata } from "./deleteBasedata";
 import { ColumnDef } from "@tanstack/react-table";
 import { useBasedataAll } from "@/lib/hooks/useBasedata";
@@ -103,12 +104,43 @@ export function CountryCRUD() {
       header: "Name",
     },
     { accessorKey: "code", header: "Code" },
+        {
+      accessorKey: "alternative_names",
+      header: "Alternative name",
+      cell: ({ row }) => {
+        const altNames = row.original.alternative_names;
+
+        if (!altNames || altNames.length === 0) {
+          return <span className="text-gray-400">—</span>;
+        }
+
+        return (
+          <div className="flex flex-wrap gap-1">
+            {altNames.map((item: any, index: number) => {
+              const name = typeof item === "string" ? item : item.name;
+              const language_key = typeof item === "string" ? item : item.key;
+              
+              return (
+                <span
+                  key={index}
+                  className="bg-gray-100 px-2 py-1 rounded text-sm"
+                >
+                  {name},{language_key}
+                </span>
+              );
+            })}
+          </div>
+        );
+      },
+    },
     {
       accessorKey: "",
       header: "Action",
       cell: ({ row }) => {
         const [isOpen, setIsOpen] = useState(false);
         const [isOpenDeletor, setIsOpenDeletor] = useState(false);
+               const [isDialogOpenAllternaitve, setIsDialogOpenAllternaitve] =
+          useState(false);
         return (
           <>
             <button
@@ -156,6 +188,43 @@ export function CountryCRUD() {
                 </g>
               </svg>
             </button>
+                 <button
+              onClick={() => setIsDialogOpenAllternaitve(true)}
+              aria-label="View user details"
+              className="hover:bg-gray-100 p-1 rounded mr-1"
+            >
+              <svg
+                width="33"
+                height="28"
+                viewBox="0 0 33 28"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <rect
+                  x="1.1"
+                  y="1.1"
+                  width="30.8"
+                  height="25.8"
+                  rx="5.4"
+                  stroke="#EAECF0"
+                  strokeWidth="1.2"
+                />
+
+                <g transform="translate(6, 4)">
+                  <text
+                    x="10.5"
+                    y="10"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize="12"
+                    fontWeight="bold"
+                    fill="#000"
+                  >
+                    L
+                  </text>
+                </g>
+              </svg>
+            </button>
             <button
               onClick={() => setIsOpenDeletor(true)}
               aria-label="View user details"
@@ -193,6 +262,12 @@ export function CountryCRUD() {
   </g>
 </svg>
             </button>
+                <BasedataAllterantiveUpdateModal
+              isOpen={isDialogOpenAllternaitve}
+              initialData={row.original}
+              onClose={() => setIsDialogOpenAllternaitve(false)}
+              servicename="country"
+            />
             <BasedataUpdateModal
               isOpen={isOpen}
               initialData={row.original}

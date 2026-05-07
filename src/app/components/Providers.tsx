@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SessionProvider, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useSessionExpiry } from "@/app/hooks/useSessionExpiry";
+import { LanguageProvider } from "@/app/context/language-context";
 
 import ClientOnly from "./ClientOnly";
 
@@ -26,10 +27,12 @@ export default function Providers({ children, session }: { children: React.React
      basePath="/api/auth"
    >
       <QueryClientProvider client={queryClient}>
-        <ClientOnly>
-          <SessionSyncHandler />
-        </ClientOnly>
-        {children}
+        <LanguageProvider>
+          <ClientOnly>
+            <SessionSyncHandler />
+          </ClientOnly>
+          {children}
+        </LanguageProvider>
       </QueryClientProvider>
     </SessionProvider>
   );
@@ -42,17 +45,44 @@ function SessionSyncHandler() {
   // Use session expiry hook to handle automatic logout
   useSessionExpiry();
 
+  // Fetch and store user data when session is authenticated
+  useEffect(() => {
+    const fetchAndStoreUserData = async () => {
+      if (status === "authenticated" && session?.access_token) {
+        try {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/iam/users/me`,
+            {
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
+            }
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.data && typeof window !== "undefined") {
+              // Store complete user data including profile_picture
+              localStorage.setItem("userData", JSON.stringify(data.data));
+              console.log("User data stored in localStorage:", data.data);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
+      }
+    };
+
+    fetchAndStoreUserData();
+  }, [status, session?.access_token]);
+
   useEffect(() => {
     // Only run on client side and avoid running during initial hydration
     if (typeof window === "undefined") return;
     
-    if (status === "authenticated") {
-      // Use setTimeout to avoid hydration issues
-      setTimeout(() => {
-        router.refresh();
-      }, 0);
-    }
-  }, [status, session, router]);
+    // Don't refresh on every session change - this causes the refresh loop
+    // The session expiry hook will handle logout when needed
+  }, []);
 
   // Handle NextAuth errors
   useEffect(() => {

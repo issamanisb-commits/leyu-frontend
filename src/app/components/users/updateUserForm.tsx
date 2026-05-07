@@ -1,10 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { usePutUser } from "@/lib/hooks/useFetchUser"; // Ensure the path and export are correct
+import { usePutUser } from "@/lib/hooks/useFetchUser";
 import { useState, useEffect } from "react";
-
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useSession } from "next-auth/react";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 interface Role {
   id: string;
@@ -40,6 +40,7 @@ export default function UpdateUserForm({
   initialData,
 }: UserFormProps) {
   const { data: session } = useSession();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     first_name: "",
     middle_name: "",
@@ -201,7 +202,7 @@ export default function UpdateUserForm({
       </div> */}
 
       <div>
-        <label className="block text-gray-700 mb-2">Role*</label>
+        <label className="block text-gray-700 mb-2">{t('roleLabel')}*</label>
         <select
           value={formData.role_id}
           onChange={(e) =>
@@ -211,7 +212,7 @@ export default function UpdateUserForm({
           required
           disabled={rolesLoading}
         >
-          <option value="">Select Role</option>
+          <option value="">{t('selectRole')}</option>
           {rolesResponse?.data?.map((role) => (
             <option key={role.id} value={role.id}>
               {role.name} - {role.description}
@@ -219,19 +220,19 @@ export default function UpdateUserForm({
           ))}
         </select>
         {rolesLoading && (
-          <p className="text-sm text-gray-500">Loading roles...</p>
+          <p className="text-sm text-gray-500">{t('loadingRoles')}</p>
         )}
       </div>
 
       <div className="flex justify-end space-x-2 pt-4">
         <Button variant="outline" type="button" onClick={onClose}>
-          Cancel
+          {t('cancel')}
         </Button>
         <Button
           type="submit"
           disabled={updateUserMutation.isPending || rolesLoading}
         >
-          {updateUserMutation.isPending ? "Creating..." : "Update User"}
+          {updateUserMutation.isPending ? t('creating') : t('updateUser')}
         </Button>
       </div>
     </form>

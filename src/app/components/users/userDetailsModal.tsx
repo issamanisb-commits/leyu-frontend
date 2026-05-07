@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialogLeft";
 import { formatDateMedium } from "@/app/types/dateUtils";
+import { handleImageError, getProfileImageSrc } from "@/app/utils/imageUtils";
 import { UserData, UserLog } from "@/app/types/global";
 import { Badge } from "@/app/components/ui/badge";
 import { usedeactivateUser } from "@/lib/hooks/useFetchUser";
@@ -200,9 +201,10 @@ export function UserDetailsModal({
             <div>
               <div className="space-y-1 pb-4 flex items-center gap-4 mt-7 rounded-2xl border-b bg-gray-100 px-2 py-2 border-gray-100 mb-4">
                 <img
-                  src={user?.image || "/default-avatar.png"}
+                  src={getProfileImageSrc(user?.image)}
                   alt="User"
                   className="w-16 h-16 mt-2 mb-2 rounded-full"
+                  onError={(e) => handleImageError(e, "/default-avatar.png")}
                 />
                 <div>
                   <h2 className="text-xl font-semibold flex items-center h-8">

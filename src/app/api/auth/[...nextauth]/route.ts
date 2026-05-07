@@ -7,8 +7,8 @@ import type { Session } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import axios from "axios";
 
-// Match the role names exactly as they come from your API
-type UserRole = "SuperAdmin" | "ProjectManager" | "Facilitator" | "Reviewer";
+
+type UserRole = "SuperAdmin" | "ProjectManager" | "Facilitator" | "Reviewer" | "QualityAssurance";
 
 interface ExtendedUser {
   id: string;
@@ -59,7 +59,6 @@ const authOptions: NextAuthOptions = {
       ) {
         try {
 
-
           const response = await axios.post(
             `${process.env.NEXT_PUBLIC_API_BASE_URL}/iam/auth/login`,
 
@@ -77,10 +76,11 @@ const authOptions: NextAuthOptions = {
           const responseData = response.data.data;
 
           if (!responseData || !responseData.user) {
-            console.error("Invalid response format:", response.data);
+          
             return null;
           }
 
+          
 
           return {
             id: responseData.user.id,
@@ -90,11 +90,10 @@ const authOptions: NextAuthOptions = {
             last_name: responseData.user.last_name,
             middle_name: responseData.user.middle_name,
             profile_picture: responseData.user.profile_picture,
-            role: responseData.user.role.name as UserRole, // Using role.name from your API
+            role: responseData.user.role.name as UserRole, 
             access_token: responseData.access_token,
           };
         } catch (error: any) {
-          console.error('Authentication error:', error.response?.data || error.message);
           return null;
         }
       },
@@ -103,7 +102,7 @@ const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: {
     strategy: "jwt",
-    maxAge: 24 * 60 * 60, // 24 hours - matches your token expiry
+    maxAge: 24 * 60 * 60,
   },
   callbacks: {
     async jwt({ token, user, account }): Promise<JWT> {
@@ -112,6 +111,7 @@ const authOptions: NextAuthOptions = {
       if (account && user) {
         // Initial sign in
         const extendedUser = user as ExtendedUser;
+
         extendedToken.id = extendedUser.id;
         extendedToken.role = extendedUser.role;
         extendedToken.access_token = extendedUser.access_token;
@@ -124,22 +124,29 @@ const authOptions: NextAuthOptions = {
         extendedToken.expires_at = Date.now() + 24 * 60 * 60 * 1000; // 24 hours from now
       }
 
-      // Check if token has expired - handle in session callback instead
-      // This ensures we always return a consistent JWT type
+      // Check if token has expired on every request
+      if (extendedToken.expires_at && Date.now() >= extendedToken.expires_at) {
+     
+        // Return empty token to force logout
+        return {} as JWT;
+      }
+
       return extendedToken;
     },
     async session({ session, token }) {
       const extendedToken = token as ExtendedJWT;
-
+   
       // Check if token has expired
       const isExpired = extendedToken.expires_at && Date.now() >= extendedToken.expires_at;
 
       // If token is empty, expired, or missing required data, don't populate session data
       if (!extendedToken.id || !extendedToken.access_token || isExpired) {
         if (isExpired) {
-         
+          
         }
-        return session; // Return the session object but don't populate user data
+   
+        // Return session with no user data to trigger logout
+        return { ...session, user: undefined, access_token: undefined } as any;
       }
 
       if (session.user) {
@@ -153,8 +160,45 @@ const authOptions: NextAuthOptions = {
         session.user.middle_name = extendedToken.middle_name || "";
         session.user.last_name = extendedToken.last_name || "";
         session.user.expires_at = extendedToken.expires_at;
+
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+     
+
+      // Handle relative URLs by making them absolute
+      let fullUrl = url;
+      if (url.startsWith('/')) {
+        fullUrl = `${baseUrl}${url}`;
+      }
+
+      try {
+        const urlObj = new URL(fullUrl);
+        const callbackUrl = urlObj.searchParams.get('callbackUrl');
+
+        if (callbackUrl) {
+          const fullCallbackUrl = callbackUrl.startsWith('/') ? `${baseUrl}${callbackUrl}` : callbackUrl;
+   
+          return fullCallbackUrl;
+        }
+      } catch (error) {
+      
+      }
+
+      if (url === baseUrl || url === `${baseUrl}/` || url.includes('/login')) {
+       
+        return baseUrl;
+      }
+
+
+      if (fullUrl.startsWith(baseUrl)) {
+       
+        return fullUrl;
+      }
+
+     
+      return baseUrl;
     },
   },
   pages: {
@@ -165,11 +209,11 @@ const authOptions: NextAuthOptions = {
     sessionToken: {
       name: "next-auth.session-token",
       options: {
-        httpOnly: true,
+        httpOnly: false,
         sameSite: "lax",
         path: "/",
-        secure: false, // Disable secure for development
-        domain: undefined, // Let browser handle domain
+        secure: process.env.NODE_ENV === "production" && process.env.NEXTAUTH_URL?.startsWith("https"),
+        domain: undefined,
       },
     },
   },

@@ -1,0 +1,38 @@
+{
+  "common": {
+    "save": "Kuusaa",
+    "cancel": "Hir'isu",
+    "delete": "Balleessuu",
+    "edit": "Gulaaluu",
+    "add": "Dabaluu",
+    "back": "Duuba",
+    "next": "Itti aanuu",
+    "previous": "Duraa",
+    "search": "Barbaadu",
+    "filter": "Gingilchaa",
+    "apply": "Hojiirra ooluu",
+    "clear": "Qulqulleessuu",
+    "loading": "Fe'aa jira...",
+    "error": "Dogoggora",
+    "success": "Milkaa'ina",
+    "warning": "Akeekkachiisa",
+    "info": "Odeeffannoo"
+  },
+  "navigation": {
+    "dashboard": "Gara dura",
+    "projects": "Pirojektii",
+    "tasks": "Hojii",
+    "settings": "Qindaa'ina",
+    "logout": "Ba'uu",
+    "profile": "Profaayila"
+  },
+  "buttons": {
+    "submit": "Ergi",
+    "approve": "Eebbisu",
+    "reject": "Diduun",
+    "flag": "Malaa",
+    "view": "Ilaaluu",
+    "download": "Buusuu",
+    "upload": "Ol seenuun"
+  }
+}

@@ -15,6 +15,7 @@ import {
   useWithdrawMoney,
   useTransactionResponse,
   Reviewerstatistics,
+  useWithdrawOptions,
 } from "@/lib/hooks/usePayment";
 import {
   Eye,
@@ -49,6 +50,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { SortingState } from "@tanstack/react-table";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 // Define Transaction interface based on provided structure
 interface Transaction {
@@ -69,15 +71,21 @@ interface WithdrawMoney {
   paymentMethod: string;
   phoneNumber: string;
   amount: string;
+  bank_code: string;
+  account_number: string;
 }
 
 const Landing: React.FC<LandingProps> = ({ usertype }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const { t } = useTranslation();
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const { data: withdrawOptionsData, isLoading: withdrawOptionsLoading } = useWithdrawOptions();
   const [withdrawFormData, setWithdrawFormData] = useState<WithdrawMoney>({
     paymentMethod: "",
     phoneNumber: "",
     amount: "",
+    bank_code: "",
+    account_number: "",
   });
   const [formErrors, setFormErrors] = useState<Partial<WithdrawMoney>>({});
   const [page, setPage] = useState(1);
@@ -105,15 +113,15 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
     type,
   });
   const transactionDataResponse: Transaction[] = Array.isArray(
-    transactionData?.data?.result
+    transactionData?.data?.result,
   )
-    ? transactionData.data.result
+    ? (transactionData?.data?.result ?? [])
     : [];
   const totaltransaction = transactionData ? transactionData.data.total : 0;
   const totalPages = Math.ceil(totaltransaction / pageSize);
 
   const handlePageSizeChange = (
-    event: React.ChangeEvent<HTMLSelectElement>
+    event: React.ChangeEvent<HTMLSelectElement>,
   ) => {
     setPageSize(Number(event.target.value));
     setPage(1);
@@ -146,10 +154,10 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
     return `${month} ${day}, ${year}, ${hours}:${minutes} ${period} EAT`;
   };
   const transactionColumns: ColumnDef<Transaction>[] = [
-    { accessorKey: "id", header: "Transaction ID", enableSorting: true },
+    { accessorKey: "id", header: t("transactionId"), enableSorting: true },
     {
       accessorKey: "amount",
-      header: "Amount",
+      header: t("amountEtb"),
       enableSorting: true,
       cell: ({ row }) => {
         const amount = parseFloat(row.getValue("amount") || "0");
@@ -161,18 +169,16 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
         );
       },
     },
-
-    { accessorKey: "status", header: "Status", enableSorting: true },
-
+    { accessorKey: "status", header: t("statusHeader"), enableSorting: true },
     {
       accessorKey: "created_date",
-      header: "Created Date",
+      header: t("createdDateHeader"),
       enableSorting: true,
       cell: ({ row }) => formatDateToEAT(row.getValue("created_date")),
     },
     {
       accessorKey: "updated_date",
-      header: "Updated Date",
+      header: t("updatedDate"),
       enableSorting: true,
       cell: ({ row }) => formatDateToEAT(row.getValue("updated_date")),
     },
@@ -191,11 +197,12 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
   });
 
   const handleWithdrawModalOpen = () => {
-   
     setWithdrawFormData({
       paymentMethod: "",
       phoneNumber: "",
       amount: "",
+      bank_code: "",
+      account_number: "",
     });
     setFormErrors({});
     setIsWithdrawModalOpen(true);
@@ -208,7 +215,7 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
 
   const handleWithdrawFormChange = (
     field: keyof WithdrawMoney,
-    value: string
+    value: string,
   ) => {
     setWithdrawFormData((prev) => ({ ...prev, [field]: value }));
     setFormErrors((prev) => ({ ...prev, [field]: "" }));
@@ -221,10 +228,6 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
 
     if (!withdrawFormData.paymentMethod) {
       errors.paymentMethod = "Payment method is required";
-    } else if (
-      !["Telebirr", "CBE Birr"].includes(withdrawFormData.paymentMethod)
-    ) {
-      errors.paymentMethod = "Invalid payment method";
     }
     if (!withdrawFormData.phoneNumber) {
       errors.phoneNumber = "Phone number is required";
@@ -243,12 +246,12 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
   };
 
   const handleWithdrawSubmit = () => {
-    if (validateWithdrawForm()) {
     
+    if (validateWithdrawForm()) {
       withdrawMutation.mutate(withdrawFormData, {
         onSuccess: () => {
           handleWithdrawModalClose();
-          
+
           refetch(); // Refetch transactions after successful withdrawal
         },
         onError: (error) => {
@@ -306,7 +309,7 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
           <div className="absolute inset-0 flex flex-col justify-center px-6">
             <div className="flex flex-row w-full">
               <span className="justify-start text-sm text-white opacity-80">
-                Your Wallet Balance
+                {t("yourWalletBalance")}
               </span>
               <div className="flex justify-end ml-auto">
                 <svg
@@ -384,7 +387,7 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
                     strokeLinejoin="round"
                   />
                 </svg>
-                Withdraw
+                {t("withdraw")}
               </Button>
             </div>
           </div>
@@ -432,7 +435,9 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
               </svg>
             </div>
 
-            <span className="text-sm text-gray-500 mt-2">Audio DataSet</span>
+            <span className="text-sm text-gray-500 mt-2">
+              {t("audioDataSet")}
+            </span>
             <span className="text-3xl font-bold text-gray-900">
               {reviwerStatistic?.data.audioDataSet}
             </span>
@@ -476,7 +481,9 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
               </svg>
             </div>
 
-            <span className="text-sm text-gray-500 mt-2">Text DataSet</span>
+            <span className="text-sm text-gray-500 mt-2">
+              {t("textDataSet")}
+            </span>
             <span className="text-3xl font-bold text-gray-900">
               {reviwerStatistic?.data.textDataSet}
             </span>
@@ -519,7 +526,9 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
               </svg>
             </div>
 
-            <span className="text-sm text-gray-500 mt-2">Total DataSet</span>
+            <span className="text-sm text-gray-500 mt-2">
+              {t("totalDataSet")}
+            </span>
             <span className="text-3xl font-bold text-gray-900">
               {reviwerStatistic?.data.totalDataSet}
             </span>
@@ -530,7 +539,7 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
       {/* --- TRANSACTION TABLE SECTION --- */}
       <div className="mt-8">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Transaction History
+          {t("transactionHistory")}
         </h2>
         <div className="flex justify-start space-x-2 mt-2 mb-4">
           <Button
@@ -538,16 +547,16 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
             onClick={() => setType("Credit")}
           >
             <span className={`h-2 w-2 rounded-full ${"bg-white"}`}></span>
-            Credit
+            {t("credit")}
           </Button>
           <Button
             className={`${type === "Withdraw" ? "bg-primary text-white" : "bg-white-600 text-gray-500"}  rounded-3xl hover:bg-blue-200 border-b-blue-400`}
             onClick={() => setType("Withdraw")}
           >
             <span
-              className={`h-2 w-2 rounded-full ${type === "Withdraw" ? "bg-white":"bg-primary"}`}
+              className={`h-2 w-2 rounded-full ${type === "Withdraw" ? "bg-white" : "bg-primary"}`}
             ></span>
-            Withdraw
+            {t("withdraw")}
           </Button>
         </div>
 
@@ -568,7 +577,7 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
                         <span>
                           {flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                         </span>
                         {header.column.getCanSort() && (
@@ -612,7 +621,7 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}
@@ -625,9 +634,9 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
                   className="h-96 text-center text-gray-500"
                 >
                   <div className="relative flex flex-col items-center justify-center py-12">
-                    <img 
-                      src="/empty.svg" 
-                      alt="No transactions available" 
+                    <img
+                      src="/empty.svg"
+                      alt="No transactions available"
                       className="w-64 h-64 opacity-50"
                     />
                   </div>
@@ -648,7 +657,7 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
                 totaltransaction > 0
                   ? `Showing ${(page - 1) * pageSize + 1} to ${Math.min(
                       page * pageSize,
-                      totaltransaction
+                      totaltransaction,
                     )} of ${totaltransaction} transactions`
                   : "No transactions to show",
             }}
@@ -661,7 +670,7 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
         <DialogContent className="max-w-md bg-white rounded-xl shadow-lg p-6">
           <DialogHeader>
             <DialogTitle className="text-2xl font-semibold text-gray-900">
-              Withdraw Funds
+              {t("withdrawFunds")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 mt-6">
@@ -670,23 +679,36 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
                 htmlFor="paymentMethod"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Payment Method <span className="text-red-500">*</span>
+                {t("paymentMethod")} <span className="text-red-500">*</span>
               </label>
               <Select
-                value={withdrawFormData.paymentMethod}
-                onValueChange={(value) =>
-                  handleWithdrawFormChange("paymentMethod", value)
-                }
+                value={withdrawFormData.bank_code ? `${withdrawFormData.paymentMethod}|${withdrawFormData.bank_code}` : ""}
+                onValueChange={(value) => {
+                  const [name, id] = value.split("|");
+                  setWithdrawFormData((prev) => ({
+                    ...prev,
+                    paymentMethod: name,
+                    bank_code: id,
+                  }));
+                  setFormErrors((prev) => ({ ...prev, paymentMethod: "" }));
+                }}
               >
                 <SelectTrigger
                   id="paymentMethod"
                   className={`w-full border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 ${formErrors.paymentMethod ? "border-red-500" : ""}`}
                 >
-                  <SelectValue placeholder="Select payment method" />
+                  <SelectValue placeholder={t("selectPaymentMethod")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Telebirr">Telebirr</SelectItem>
-                  <SelectItem value="CBE Birr">CBE Birr</SelectItem>
+                  {withdrawOptionsLoading ? (
+                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                  ) : (
+                    withdrawOptionsData?.data?.map((option) => (
+                      <SelectItem key={option.id} value={`${option.name}|${option.id}`}>
+                        {option.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               {formErrors.paymentMethod && (
@@ -697,24 +719,24 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
             </div>
             <div>
               <label
-                htmlFor="phoneNumber"
+                htmlFor="account_number"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Phone Number <span className="text-red-500">*</span>
+                {t("account_number")} <span className="text-red-500">*</span>
               </label>
               <Input
-                id="phoneNumber"
+                id="account_number"
                 type="text"
-                value={withdrawFormData.phoneNumber}
+                value={withdrawFormData.account_number}
                 onChange={(e) =>
-                  handleWithdrawFormChange("phoneNumber", e.target.value)
+                  handleWithdrawFormChange("account_number", e.target.value)
                 }
-                placeholder="+251912345678"
-                className={`w-full border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 ${formErrors.phoneNumber ? "border-red-500" : ""}`}
+               
+                className={`w-full border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 ${formErrors.account_number ? "border-red-500" : ""}`}
               />
-              {formErrors.phoneNumber && (
+              {formErrors.account_number && (
                 <p className="text-red-500 text-sm mt-1">
-                  {formErrors.phoneNumber}
+                  {formErrors.account_number}
                 </p>
               )}
             </div>
@@ -723,7 +745,7 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
                 htmlFor="amount"
                 className="block text-sm font-medium text-gray-700 mb-2"
               >
-                Amount (ETB) <span className="text-red-500">*</span>
+                {t("amountEtb")} <span className="text-red-500">*</span>
               </label>
               <Input
                 id="amount"
@@ -741,7 +763,7 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
                 <p className="text-red-500 text-sm mt-1">{formErrors.amount}</p>
               )}
               <p className="text-sm text-gray-500 mt-2">
-                Available balance: {mybalance?.data || "0"} ETB
+                {t("availableBalance")}: {mybalance?.data || "0"} ETB
               </p>
             </div>
           </div>
@@ -751,7 +773,7 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
               onClick={handleWithdrawModalClose}
               className="border-gray-300 text-gray-700 hover:bg-gray-100 rounded-md px-4 py-2"
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               onClick={handleWithdrawSubmit}
@@ -761,7 +783,7 @@ const Landing: React.FC<LandingProps> = ({ usertype }) => {
               {withdrawMutation.isPending ? (
                 <Loader2 className="h-5 w-5 animate-spin mr-2" />
               ) : (
-                "Withdraw"
+                t("withdraw")
               )}
             </Button>
           </DialogFooter>

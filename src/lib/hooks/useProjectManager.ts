@@ -18,7 +18,11 @@ interface NewTaskMicroTaskProps {
 }
 
 
+interface InstructionDeleteProfilesProps {
+    id: string;
+    task_id:string;
 
+}
 interface NewProjectrofilesProps {
     id: string
 }
@@ -191,6 +195,130 @@ export const GenerateInstruction = () => {
 
 
 };
+export const GenerateQAInstruction = () => {
+    const queryClient = useQueryClient();
+    const { data: session } = useSession();
+    return useMutation(
+        {
+            mutationFn: async (InstructionData: Instruction) => {
+                if (!session?.access_token) {
+                    throw new Error("No authentication token available");
+                }
+
+
+
+                const response = await axios.post<InvitationResponseData>(
+                    `${process.env.NEXT_PUBLIC_API_BASE_URL}/project-mgmt/task/${InstructionData.taskId}/add-qa-instruction`,
+                    InstructionData,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${session.access_token}`,
+                        },
+                    }
+                );
+                return response;
+            },
+            onSuccess: (data) => {
+                toast.success("Success", {
+                    description: "Instruction created successfully",
+                });
+                queryClient.invalidateQueries({ queryKey: ["task"] });
+            },
+            onError: (error) => {
+                if (axios.isAxiosError(error)) {
+                    toast.error("Error", {
+                        description:
+                            error.response?.data?.message || "Failed to create microtask",
+                    });
+                }
+            },
+        }
+    );
+
+
+};
+export const GenerateReviewerInstruction = () => {
+    const queryClient = useQueryClient();
+    const { data: session } = useSession();
+    return useMutation(
+        {
+            mutationFn: async (InstructionData: Instruction) => {
+                if (!session?.access_token) {
+                    throw new Error("No authentication token available");
+                }
+
+
+
+                const response = await axios.post<InvitationResponseData>(
+                    `${process.env.NEXT_PUBLIC_API_BASE_URL}/project-mgmt/task/${InstructionData.taskId}/add-reviewer-instruction`,
+                    InstructionData,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${session.access_token}`,
+                        },
+                    }
+                );
+                return response;
+            },
+            onSuccess: (data) => {
+                toast.success("Success", {
+                    description: "Instruction created successfully",
+                });
+                queryClient.invalidateQueries({ queryKey: ["task"] });
+            },
+            onError: (error) => {
+                if (axios.isAxiosError(error)) {
+                    toast.error("Error", {
+                        description:
+                            error.response?.data?.message || "Failed to create microtask",
+                    });
+                }
+            },
+        }
+    );
+
+
+};
+export const useDeleteInstruction = ({
+    id,task_id
+}: InstructionDeleteProfilesProps) => {
+    const { data: session } = useSession();
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async () => {
+            if (!session?.access_token) {
+                throw new Error("No authentication token available");
+            }
+
+            const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+            const response = await axios.delete(
+                `${baseUrl}/project-mgmt/task/${id}/instruction`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${session.access_token}`,
+                    },
+                }
+            );
+
+            return response.data;
+        },
+        onSuccess: () => {
+            toast.success("Success", {
+                description: `Instruction deleted successfully`,
+            });
+            queryClient.invalidateQueries({ queryKey: ["task"] });
+        },
+        onError: (error) => {
+            if (axios.isAxiosError(error)) {
+                toast.error("Error", {
+                    description:
+                        error.response?.data?.message || `Failed to delete Instruction`,
+                });
+            }
+        },
+    });
+};
 export const EditInstruction = () => {
     const queryClient = useQueryClient();
     const { data: session } = useSession();
@@ -202,8 +330,8 @@ export const EditInstruction = () => {
                     throw new Error("No authentication token available");
                 }
 
-
-
+                InstructionData.video_instruction_url = InstructionData.video_instruction_url === "" ? null : InstructionData.video_instruction_url;
+                InstructionData.audio_instruction_url = InstructionData.audio_instruction_url === "" ? null : InstructionData.audio_instruction_url;
                 const response = await axios.put<InvitationResponseData>(
                     `${process.env.NEXT_PUBLIC_API_BASE_URL}/project-mgmt/task/${InstructionData.taskId}/instruction`,
                     InstructionData,
@@ -350,7 +478,7 @@ export const AddTaskUser = () => {
                 }
                 let role = data.memberType
                 let usertype = "facilitator";
-
+                console.log('role', role)
                 if (role) {
                     const normalizedRole = role.toLowerCase();
                     if (normalizedRole === "reviewers") {
@@ -358,6 +486,20 @@ export const AddTaskUser = () => {
                     } else if (normalizedRole === "contributors") {
                         usertype = "contributor";
                     }
+                    else if (normalizedRole === "qualityassurance") {
+                        usertype = "qa";
+                    }
+                      else if (normalizedRole === "QualityAssurance") {
+                        usertype = "qa";
+                    }
+                    else if (normalizedRole === "qualityAssurance") {
+                        usertype = "qa";
+                    }
+                }
+                console.log('usertype1', usertype)
+                if(usertype === "qa"){
+
+                
                 }
                 const response = await axios.post<InvitationResponseData>(
                     `${process.env.NEXT_PUBLIC_API_BASE_URL}/project-mgmt/task/${data.taskId}/assign-${usertype}`,

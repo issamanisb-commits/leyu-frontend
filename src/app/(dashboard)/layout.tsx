@@ -4,6 +4,7 @@ import Sidebar from "@/app/components/layout/Sidebar";
 import TopBar from "@/app/components/layout/TopBar";
 import { useSyncAuthStore } from "@/app/context/auth-context";
 import { usePathname } from "next/navigation";
+import { useTranslation } from "@/lib/hooks/useTranslation";
 
 
 export default function DashboardLayout({
@@ -13,6 +14,7 @@ export default function DashboardLayout({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const { t } = useTranslation();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -21,20 +23,19 @@ export default function DashboardLayout({
   useSyncAuthStore();
   const pathname = usePathname();
 
-  // Debug navigation
-  useEffect(() => {
-   
-  }, [pathname]);
-
-  // Map for friendly names
+  // Map for friendly names using translation keys
   const titleMap: Record<string, string> = {
-    project: "Project",
-    projectDetail: "Project Detail",
-    basedata: "Base Data",
-    country: "Country",
-    projectmanager: "Dashboard",
-    superadmin: "Dashboard",
-    users :"User Management"
+    project: t('projects'),
+    projectDetail: t('projectDetails'),
+    basedata: t('baseData'),
+    country: t('country'),
+    projectmanager: t('dashboard'),
+    superadmin: t('dashboard'),
+    users: t('userManagement'),
+    tasks: t('tasks'),
+    settings: t('settings'),
+    log: t('systemLog'),
+    archive: t('archive'),
   };
 
   // Helper to check if a segment is a UUID (basic check)
@@ -57,19 +58,16 @@ export default function DashboardLayout({
 
   function getPageTitle(pathname: string) {
     const segments = pathname.split("/").filter(Boolean);
-    // Remove dynamic and UUID segments
     const staticSegments = segments.filter(
       seg => !isDynamic(seg) && !isUUID(seg)
     );
-    // Use the last static segment
     let last = staticSegments[staticSegments.length - 1];
-    if (!last) return "Dashboard";
+    if (!last) return t('dashboard');
     return titleMap[last] || toTitleCase(last);
   }
 
   function getRoleFromPath(pathname: string) {
     const segments = pathname.split("/").filter(Boolean);
-    // Assuming role is always the 2nd segment after (dashboard)
     const dashboardIdx = segments.indexOf("(dashboard)");
     if (dashboardIdx !== -1 && segments.length > dashboardIdx + 1) {
       return segments[dashboardIdx + 1].charAt(0).toUpperCase() + segments[dashboardIdx + 1].slice(1);
@@ -79,7 +77,8 @@ export default function DashboardLayout({
 
   const role = getRoleFromPath(pathname);
   const pageTitle = getPageTitle(pathname);
-  const fullTitle = role ? `${role} ${pageTitle}` : pageTitle;
+  // Don't prepend role to title - just show the page title
+  const fullTitle = pageTitle;
 
   useEffect(() => {
     const handleResize = () => {

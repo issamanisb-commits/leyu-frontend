@@ -705,6 +705,43 @@ export const usePutBasedata = (
     },
   });
 };
+export const useAletrantiveNameBasedata = (
+  servicename: UseBasedataProps["servicename"]
+) => {
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  return useMutation<Basedata, MutationError, Basedata>({
+    mutationFn: async (ResponseData: Basedata) => {
+      if (!session?.access_token) {
+        throw new Error("No authentication token available");
+      }
+
+      const response = await axios.put<Basedata>(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/setting/${servicename}/${ResponseData.id}`,
+        ResponseData,
+        {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }
+      );
+      queryClient.invalidateQueries({ queryKey: [`${servicename}`] });
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success("Success", {
+        description: "basedata updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`${servicename}`] });
+    },
+    onError: (error) => {
+      if (axios.isAxiosError(error)) {
+        toast.error("Error", {
+          description:
+            error.response?.data?.message || "Failed to update basedata",
+        });
+      }
+    },
+  });
+};
 export const useAddBasedata = (
   servicename: UseBasedataProps["servicename"]
 ) => {
